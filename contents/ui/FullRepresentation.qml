@@ -71,29 +71,12 @@ Item {
                     }
                 }
 
-                RowLayout {
-                    spacing: 4
+                PlasmaComponents3.Label {
+                    text: fullRoot.resolvedSyncDir
+                    elide: Text.ElideMiddle
                     Layout.fillWidth: true
-
-                    PlasmaComponents3.Label {
-                        text: fullRoot.resolvedSyncDir
-                        elide: Text.ElideMiddle
-                        Layout.fillWidth: true
-                        opacity: 0.7
-                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.82
-                    }
-
-                    PlasmaComponents3.ToolButton {
-                        icon.name: "document-open-folder"
-                        display: PlasmaComponents3.AbstractButton.IconOnly
-                        implicitWidth: 20
-                        implicitHeight: 20
-                        PlasmaComponents3.ToolTip.visible: hovered
-                        PlasmaComponents3.ToolTip.text: i18n("Open in Dolphin")
-                        onClicked: {
-                            if (mainRoot) mainRoot.openFolder();
-                        }
-                    }
+                    opacity: 0.7
+                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.82
                 }
             }
 
