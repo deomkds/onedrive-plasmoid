@@ -18,12 +18,17 @@ RowLayout {
     spacing: Kirigami.Units.smallSpacing
     Layout.fillWidth: true
 
+    readonly property real sharedActionWidth: Math.max(syncBtn.implicitWidth, pauseBtn.implicitWidth)
+    readonly property real maxActionWidth: Kirigami.Units.gridUnit * 9
+
     PlasmaComponents3.Button {
         id: syncBtn
         text: root.status === "syncing" ? i18n("Syncing...") : i18n("Sync Now")
         icon.name: "state-sync"
         enabled: !root.isBusy && root.status !== "syncing"
         Layout.fillWidth: true
+        Layout.preferredWidth: root.sharedActionWidth
+        Layout.maximumWidth: root.maxActionWidth
         onClicked: root.syncTriggered()
     }
 
@@ -33,7 +38,13 @@ RowLayout {
         icon.name: root.status === "suspended" ? "media-playback-start" : "media-playback-pause"
         enabled: !root.isBusy
         Layout.fillWidth: true
+        Layout.preferredWidth: root.sharedActionWidth
+        Layout.maximumWidth: root.maxActionWidth
         onClicked: root.togglePauseTriggered()
+    }
+
+    Item {
+        Layout.fillWidth: true
     }
 
     PlasmaComponents3.ToolButton {
