@@ -105,9 +105,8 @@ systemctl --user enable --now onedrive.service
 
 - **Author & Maintainer**: Marcus Vinícius ([@deomkds](https://github.com/deomkds) - `mv.cunha2009@gmail.com`)
 - **Acknowledgments**:
-  - **Daniel Borges de Oliveira**: Original author of the legacy `onedrive_tray` application.
+  - **Daniel Borges de Oliveira**: Original author of the `onedrive_tray` application.
   - **abraunegg**: Creator and maintainer of the excellent [OneDrive Client for Linux](https://github.com/abraunegg/onedrive).
-  - **AI Assistant**: Assisted during architectural design, modernization for KDE Plasma 6, and development.
 
 ## AI Disclaimer
 
