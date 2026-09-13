@@ -75,10 +75,14 @@ function parseSyncStatus(output) {
     }
 
     if (output.indexOf("There are no pending changes") !== -1 ||
-        output.indexOf("Sync with OneDrive is complete") !== -1) {
+        output.indexOf("Sync with OneDrive is complete") !== -1 ||
+        output.indexOf("matches the data online") !== -1) {
         result.synced = true;
         result.details = "No pending changes";
     } else if (output.indexOf("pending changes") !== -1 ||
+               output.indexOf("out of sync") !== -1 ||
+               output.indexOf("data to download") !== -1 ||
+               output.indexOf("data to upload") !== -1 ||
                output.indexOf("Downloading") !== -1 ||
                output.indexOf("Uploading") !== -1) {
         result.synced = false;
