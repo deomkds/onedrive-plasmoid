@@ -28,12 +28,35 @@ PlasmoidItem {
         ? Qt.resolvedUrl("../../images/OneDrive.svg")
         : "cloud"
 
-    preferredRepresentation: fullRepresentation
+    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+
+    readonly property bool inPanel: [
+        PlasmaCore.Types.TopEdge,
+        PlasmaCore.Types.RightEdge,
+        PlasmaCore.Types.BottomEdge,
+        PlasmaCore.Types.LeftEdge,
+    ].includes(Plasmoid.location)
+
+    toolTipTextFormat: Text.PlainText
+    toolTipMainText: i18n("Microsoft OneDrive")
+    toolTipSubText: {
+        var text = i18n("Status: %1", root.statusDescription);
+        if (root.quotaRemaining !== "") {
+            text += "\n" + i18n("Free space: %1", root.quotaRemaining);
+        }
+        if (root.lastSyncTime !== "") {
+            text += "\n" + i18n("Last updated: %1", root.lastSyncTime);
+        }
+        return text;
+    }
+
+    preferredRepresentation: Plasmoid.formFactor === PlasmaCore.Types.Planar ? fullRepresentation : compactRepresentation
     compactRepresentation: CompactRepresentation {
         mainRoot: root
     }
     fullRepresentation: FullRepresentation {
         mainRoot: root
+        Plasmoid.backgroundHints: root.inPanel ? PlasmaCore.Types.NoBackground : PlasmaCore.Types.DefaultBackground
     }
 
     // Context menu actions for right-click on panel icon

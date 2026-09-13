@@ -11,12 +11,7 @@ Item {
 
     readonly property bool inVerticalPanel: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property string currentStatus: mainRoot ? mainRoot.syncStatus : "idle"
-    readonly property string statusDesc: mainRoot ? mainRoot.statusDescription : i18n("Ready")
-    readonly property string freeSpace: mainRoot ? mainRoot.quotaRemaining : ""
-    readonly property string lastSync: mainRoot ? mainRoot.lastSyncTime : ""
 
-    Layout.preferredWidth: inVerticalPanel ? Kirigami.Units.iconSizes.medium : Kirigami.Units.iconSizes.medium
-    Layout.preferredHeight: inVerticalPanel ? Kirigami.Units.iconSizes.medium : Kirigami.Units.iconSizes.medium
     Layout.minimumWidth: Kirigami.Units.iconSizes.small
     Layout.minimumHeight: Kirigami.Units.iconSizes.small
 
@@ -86,24 +81,14 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
 
-        onClicked: {
-            plasmoid.expanded = !plasmoid.expanded;
-        }
-    }
+        property bool wasExpanded: false
 
-    PlasmaCore.ToolTipArea {
-        id: toolTip
-        anchors.fill: parent
-        mainText: i18n("Microsoft OneDrive")
-        subText: {
-            var text = i18n("Status: %1", compactRoot.statusDesc);
-            if (compactRoot.freeSpace !== "") {
-                text += "\n" + i18n("Free space: %1", compactRoot.freeSpace);
-            }
-            if (compactRoot.lastSync !== "") {
-                text += "\n" + i18n("Last updated: %1", compactRoot.lastSync);
-            }
-            return text;
+        onPressed: mouse => {
+            wasExpanded = plasmoid.expanded;
+        }
+
+        onClicked: mouse => {
+            plasmoid.expanded = !wasExpanded;
         }
     }
 }
