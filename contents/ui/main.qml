@@ -26,7 +26,7 @@ PlasmoidItem {
 
     Plasmoid.icon: plasmoid.configuration.iconStyle === "color"
         ? Qt.resolvedUrl("../../images/OneDrive.svg")
-        : "cloud"
+        : (root.syncStatus === "syncing" ? "state-sync" : (root.syncStatus === "suspended" ? "media-playback-pause" : (root.syncStatus === "error" ? "dialog-warning" : "cloud")))
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
 
@@ -50,9 +50,8 @@ PlasmoidItem {
         return text;
     }
 
-    preferredRepresentation: Plasmoid.formFactor === PlasmaCore.Types.Planar ? fullRepresentation : compactRepresentation
     compactRepresentation: CompactRepresentation {
-        mainRoot: root
+        plasmoidItem: root
     }
     fullRepresentation: FullRepresentation {
         mainRoot: root
