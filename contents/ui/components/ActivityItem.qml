@@ -9,6 +9,7 @@ Rectangle {
     property string iconName: "document-share"
     property string operationTitle: ""
     property string fileName: ""
+    property string filePath: ""
     property string time: ""
     property string operationType: "info"
 
@@ -99,7 +100,7 @@ Rectangle {
             implicitHeight: 24
             PlasmaComponents3.ToolTip.visible: hovered
             PlasmaComponents3.ToolTip.text: i18n("Open in File Manager")
-            onClicked: root.itemClicked(root.fileName)
+            onClicked: root.itemClicked(root.filePath || root.fileName)
         }
     }
 
@@ -110,7 +111,7 @@ Rectangle {
         acceptedButtons: Qt.LeftButton
         onClicked: {
             if (root.operationType !== "error" && root.operationType !== "delete") {
-                root.itemClicked(root.fileName);
+                root.itemClicked(root.filePath || root.fileName);
             }
         }
     }

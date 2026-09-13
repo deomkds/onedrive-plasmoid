@@ -142,55 +142,68 @@ function parseLogEntries(logOutput) {
 
         if (content.match(/Downloading (?:new |modified )?file\s+(.+)/i)) {
             var dlMatch = content.match(/Downloading (?:new |modified )?file\s+(.+)/i);
+            var dlPath = cleanFileName(dlMatch[1]);
             entries.push({
                 type: "download",
                 title: "Downloaded",
-                fileName: cleanFileName(dlMatch[1]),
+                fileName: dlPath,
+                filePath: dlPath,
                 time: timestamp,
                 icon: "download"
             });
         } else if (content.match(/Uploading (?:new |modified )?file\s+(.+)/i)) {
             var upMatch = content.match(/Uploading (?:new |modified )?file\s+(.+)/i);
+            var upPath = cleanFileName(upMatch[1]);
             entries.push({
                 type: "upload",
                 title: "Uploaded",
-                fileName: cleanFileName(upMatch[1]),
+                fileName: upPath,
+                filePath: upPath,
                 time: timestamp,
                 icon: "upload"
             });
         } else if (content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i)) {
             var delMatch = content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i);
+            var delPath = cleanFileName(delMatch[1]);
             entries.push({
                 type: "delete",
                 title: "Deleted",
-                fileName: cleanFileName(delMatch[1]),
+                fileName: delPath,
+                filePath: "",
                 time: timestamp,
                 icon: "edit-delete"
             });
         } else if (content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i)) {
             var moveMatch = content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i);
+            var srcPath = cleanFileName(moveMatch[1]);
+            var dstPath = cleanFileName(moveMatch[2]);
             entries.push({
                 type: "move",
                 title: "Moved/Renamed",
-                fileName: cleanFileName(moveMatch[1]) + " → " + cleanFileName(moveMatch[2]),
+                fileName: srcPath + " → " + dstPath,
+                filePath: dstPath,
                 time: timestamp,
                 icon: "edit-rename"
             });
         } else if (content.match(/Creating local directory:\s+(.+)/i)) {
             var mkdirMatch = content.match(/Creating local directory:\s+(.+)/i);
+            var dirPath = cleanFileName(mkdirMatch[1]);
             entries.push({
                 type: "folder",
                 title: "Directory created",
-                fileName: cleanFileName(mkdirMatch[1]),
+                fileName: dirPath,
+                filePath: dirPath,
                 time: timestamp,
                 icon: "folder-new"
             });
         } else if (content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on OneDrive)?$/i)) {
             var rdirMatch = content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on OneDrive)?$/i);
+            var rPath = cleanFileName(rdirMatch[1]);
             entries.push({
                 type: "folder",
                 title: "Remote directory created",
-                fileName: cleanFileName(rdirMatch[1]),
+                fileName: rPath,
+                filePath: rPath,
                 time: timestamp,
                 icon: "folder-cloud"
             });
@@ -199,6 +212,7 @@ function parseLogEntries(logOutput) {
                 type: "error",
                 title: "Error",
                 fileName: content.substring(content.indexOf("rror:") + 5).trim(),
+                filePath: "",
                 time: timestamp,
                 icon: "dialog-error"
             });

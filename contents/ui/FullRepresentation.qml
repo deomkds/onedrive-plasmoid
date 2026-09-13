@@ -164,6 +164,7 @@ Item {
                     operationType: model.type || "info"
                     operationTitle: model.title || ""
                     fileName: model.fileName || ""
+                    filePath: model.filePath || model.fileName || ""
                     time: model.time || ""
                     iconName: model.icon || ""
 

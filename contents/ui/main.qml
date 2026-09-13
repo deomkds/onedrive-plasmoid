@@ -320,13 +320,48 @@ PlasmoidItem {
         execute("xdg-open \"" + dir + "\"");
     }
 
-    function openFileOrFolder(fileName) {
-        if (!fileName) {
+    function openFileOrFolder(target) {
+        if (!target) {
             openFolder();
             return;
         }
-        var fullPath = root.resolvedSyncDir + "/" + fileName;
-        execute("dolphin --select \"" + fullPath + "\" || xdg-open \"" + root.resolvedSyncDir + "\"");
+
+        var cleanTarget = ("" + target).trim();
+        // If string contains move/rename indicator ("src → dst" or "src -> dst"), extract destination
+        if (cleanTarget.indexOf("→") !== -1 || cleanTarget.indexOf("->") !== -1) {
+            var parts = cleanTarget.split(/\s*(?:→|->)\s*/);
+            cleanTarget = parts[parts.length - 1].trim();
+        }
+
+        // Remove surrounding quotes and accidental leading slashes
+        cleanTarget = cleanTarget.replace(/^["']|["']$/g, "").replace(/^\/+/, "");
+
+        var syncDir = root.resolvedSyncDir;
+        var fullPath = "";
+        if (cleanTarget.indexOf(syncDir) === 0) {
+            fullPath = cleanTarget;
+        } else {
+            fullPath = syncDir + "/" + cleanTarget;
+        }
+
+        // Smart shell script:
+        // 1. If file exists, select it with dolphin
+        // 2. If file missing but parent directory exists, open directory
+        // 3. If neither exists, fallback cleanly to sync directory
+        var script = 'f="' + fullPath.replace(/"/g, '\\"') + '"; ' +
+                     's="' + syncDir.replace(/"/g, '\\"') + '"; ' +
+                     'if [ -e "$f" ]; then ' +
+                     '  dolphin --select "$f" 2>/dev/null || xdg-open "$f" 2>/dev/null || xdg-open "$s" 2>/dev/null; ' +
+                     'else ' +
+                     '  d="$(dirname "$f")"; ' +
+                     '  if [ -d "$d" ]; then ' +
+                     '    xdg-open "$d" 2>/dev/null || xdg-open "$s" 2>/dev/null; ' +
+                     '  else ' +
+                     '    xdg-open "$s" 2>/dev/null; ' +
+                     '  fi; ' +
+                     'fi';
+
+        execute("sh -c '" + script.replace(/'/g, "'\\''") + "'");
     }
 
     function openWeb() {
