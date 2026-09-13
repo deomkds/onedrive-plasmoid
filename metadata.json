@@ -15,10 +15,15 @@
             {
                 "Name": "abraunegg",
                 "Email": ""
+            },
+            {
+                "Name": "AI Assistant (Development Assistance)",
+                "Email": ""
             }
         ],
         "Category": "Utilities",
-        "Description": "Monitor and control Microsoft OneDrive client for Linux",
+        "Copyright": "Developed by Marcus Vinícius with AI assistance.",
+        "Description": "Monitor and control Microsoft OneDrive client for Linux (developed with AI assistance)",
         "EnabledByDefault": true,
         "Icon": "onedrive",
         "Id": "org.kde.plasma.onedrive",

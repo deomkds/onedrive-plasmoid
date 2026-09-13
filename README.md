@@ -107,6 +107,11 @@ systemctl --user enable --now onedrive.service
 - **Acknowledgments**:
   - **Daniel Borges de Oliveira**: Original author of the legacy `onedrive_tray` application.
   - **abraunegg**: Creator and maintainer of the excellent [OneDrive Client for Linux](https://github.com/abraunegg/onedrive).
+  - **AI Assistant**: Assisted during architectural design, modernization for KDE Plasma 6, and development.
+
+## AI Disclaimer
+
+This project was developed with the assistance of Artificial Intelligence (AI) tools for code modernization, architecture adaptation, and KDE Plasma 6 development.
 
 ## License
 
