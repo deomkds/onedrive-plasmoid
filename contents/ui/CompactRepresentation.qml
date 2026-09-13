@@ -29,6 +29,10 @@ Item {
         anchors.fill: parent
         source: Plasmoid.icon
         active: mouseArea.containsMouse
+        isMask: {
+            var s = plasmoid.configuration.iconStyle;
+            return s === "onedrive-monochrome" || s === "folder-onedrive-symbolic" || s === "cloudstatus";
+        }
     }
 
     // Overlay animated sync emblem when syncing

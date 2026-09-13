@@ -16,13 +16,19 @@ KCMUtils.SimpleKCM {
             textRole: "text"
             valueRole: "value"
             model: [
-                { text: i18n("System OneDrive Icon (Default)"), value: "onedrive" },
-                { text: i18n("Folder OneDrive Icon"), value: "folder-onedrive" },
-                { text: i18n("Generic Cloud Icon"), value: "cloud" }
+                { text: i18n("System OneDrive Icon (Color - Default)"), value: "onedrive" },
+                { text: i18n("OneDrive Monochrome (Adapts to Light/Dark Theme)"), value: "onedrive-monochrome" },
+                { text: i18n("Breeze OneDrive Symbolic"), value: "folder-onedrive-symbolic" },
+                { text: i18n("Breeze Cloud Symbolic"), value: "cloudstatus" },
+                { text: i18n("Folder OneDrive Icon (Color)"), value: "folder-onedrive" }
             ]
             currentIndex: {
-                if (plasmoid.configuration.iconStyle === "folder-onedrive") return 1;
-                if (plasmoid.configuration.iconStyle === "cloud") return 2;
+                var current = plasmoid.configuration.iconStyle || "onedrive";
+                for (var i = 0; i < model.length; ++i) {
+                    if (model[i].value === current) {
+                        return i;
+                    }
+                }
                 return 0;
             }
         }

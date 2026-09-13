@@ -28,6 +28,11 @@ rm -rf "${DEST_DIR}"
 mkdir -p "${DEST_DIR}"
 cp -r "${SOURCE_DIR}/metadata.json" "${DEST_DIR}/"
 cp -r "${SOURCE_DIR}/contents" "${DEST_DIR}/"
+if [ -d "${SOURCE_DIR}/icons" ]; then
+    cp -r "${SOURCE_DIR}/icons" "${DEST_DIR}/"
+    mkdir -p "${HOME}/.local/share/icons/hicolor/scalable/status"
+    cp -f "${SOURCE_DIR}/icons/"*.svg "${HOME}/.local/share/icons/hicolor/scalable/status/" || true
+fi
 if [ -d "${SOURCE_DIR}/images" ]; then
     cp -r "${SOURCE_DIR}/images" "${DEST_DIR}/"
 fi

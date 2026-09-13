@@ -26,14 +26,17 @@ PlasmoidItem {
 
     Plasmoid.icon: {
         var style = plasmoid.configuration.iconStyle || "onedrive";
-        if (style === "onedrive" || style === "default") {
-            return "onedrive";
+        if (style === "onedrive-monochrome") {
+            return Qt.resolvedUrl("assets/onedrive-monochrome.svg");
+        }
+        if (style === "folder-onedrive-symbolic") {
+            return "folder-onedrive-symbolic";
+        }
+        if (style === "cloudstatus" || style === "cloud") {
+            return "cloudstatus";
         }
         if (style === "folder-onedrive") {
             return "folder-onedrive";
-        }
-        if (style === "cloud") {
-            return "cloud";
         }
         return "onedrive";
     }
