@@ -16,10 +16,15 @@ KCMUtils.SimpleKCM {
             textRole: "text"
             valueRole: "value"
             model: [
-                { text: i18n("Breeze Theme Monochrome / Adaptive"), value: "breeze" },
-                { text: i18n("Official OneDrive Blue / Colored"), value: "color" }
+                { text: i18n("System OneDrive Icon (Default)"), value: "onedrive" },
+                { text: i18n("Folder OneDrive Icon"), value: "folder-onedrive" },
+                { text: i18n("Generic Cloud Icon"), value: "cloud" }
             ]
-            currentIndex: plasmoid.configuration.iconStyle === "color" ? 1 : 0
+            currentIndex: {
+                if (plasmoid.configuration.iconStyle === "folder-onedrive") return 1;
+                if (plasmoid.configuration.iconStyle === "cloud") return 2;
+                return 0;
+            }
         }
     }
 }

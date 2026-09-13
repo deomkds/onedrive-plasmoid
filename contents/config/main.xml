@@ -42,8 +42,8 @@
             <default>https://onedrive.live.com</default>
         </entry>
         <entry name="iconStyle" type="String">
-            <label>Icon style (breeze or color)</label>
-            <default>breeze</default>
+            <label>Icon style (onedrive, folder-onedrive, cloud)</label>
+            <default>onedrive</default>
         </entry>
     </group>
 </kcfg>

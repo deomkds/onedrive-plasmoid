@@ -24,9 +24,19 @@ PlasmoidItem {
 
     property var activityModel: ListModel {}
 
-    Plasmoid.icon: plasmoid.configuration.iconStyle === "color"
-        ? Qt.resolvedUrl("../../images/OneDrive.svg")
-        : (root.syncStatus === "syncing" ? "state-sync" : (root.syncStatus === "suspended" ? "media-playback-pause" : (root.syncStatus === "error" ? "dialog-warning" : "cloud")))
+    Plasmoid.icon: {
+        var style = plasmoid.configuration.iconStyle || "onedrive";
+        if (style === "onedrive" || style === "default") {
+            return "onedrive";
+        }
+        if (style === "folder-onedrive") {
+            return "folder-onedrive";
+        }
+        if (style === "cloud") {
+            return "cloud";
+        }
+        return "onedrive";
+    }
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
 

@@ -45,9 +45,7 @@ Item {
             spacing: Kirigami.Units.smallSpacing
 
             Kirigami.Icon {
-                source: plasmoid.configuration.iconStyle === "color"
-                    ? Qt.resolvedUrl("../../images/OneDrive.svg")
-                    : "cloud"
+                source: Plasmoid.icon || "onedrive"
                 implicitWidth: 28
                 implicitHeight: 28
                 Layout.alignment: Qt.AlignVCenter

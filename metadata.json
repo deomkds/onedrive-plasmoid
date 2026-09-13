@@ -10,7 +10,7 @@
         "Category": "Utilities",
         "Description": "Monitor and control Microsoft OneDrive client for Linux",
         "EnabledByDefault": true,
-        "Icon": "cloud",
+        "Icon": "onedrive",
         "Id": "org.kde.plasma.onedrive",
         "License": "GPL-3.0-or-later",
         "Name": "OneDrive",
