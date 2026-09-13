@@ -31,42 +31,69 @@ Item {
     Layout.maximumWidth: Kirigami.Units.gridUnit * 28
 
     Layout.minimumHeight: Kirigami.Units.gridUnit * 28
-    Layout.preferredHeight: Kirigami.Units.gridUnit * 32
-    Layout.maximumHeight: Kirigami.Units.gridUnit * 38
+    Layout.preferredHeight: Kirigami.Units.gridUnit * 34
+    Layout.maximumHeight: Kirigami.Units.gridUnit * 40
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Kirigami.Units.mediumSpacing
-        spacing: Kirigami.Units.mediumSpacing
+        anchors.margins: Kirigami.Units.smallSpacing * 1.5
+        spacing: Kirigami.Units.smallSpacing
 
-        // Header Section
+        // Header Section (Integrated with Folder Path)
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
             Kirigami.Icon {
                 source: Plasmoid.icon || "onedrive"
-                implicitWidth: 28
-                implicitHeight: 28
+                implicitWidth: 24
+                implicitHeight: 24
                 Layout.alignment: Qt.AlignVCenter
             }
 
             ColumnLayout {
-                spacing: 0
+                spacing: 1
                 Layout.fillWidth: true
 
-                PlasmaComponents3.Label {
-                    text: i18n("Microsoft OneDrive")
-                    font.bold: true
-                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.1
+                RowLayout {
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PlasmaComponents3.Label {
+                        text: i18n("Microsoft OneDrive")
+                        font.bold: true
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: fullRoot.accountType ? "• " + fullRoot.accountType : ""
+                        opacity: 0.5
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                    }
                 }
 
-                PlasmaComponents3.Label {
-                    text: fullRoot.accountType !== ""
-                        ? i18n("Account: %1", fullRoot.accountType)
-                        : i18n("Client for Linux")
-                    opacity: 0.6
-                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
+                RowLayout {
+                    spacing: 4
+                    Layout.fillWidth: true
+
+                    PlasmaComponents3.Label {
+                        text: fullRoot.resolvedSyncDir
+                        elide: Text.ElideMiddle
+                        Layout.fillWidth: true
+                        opacity: 0.7
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.82
+                    }
+
+                    PlasmaComponents3.ToolButton {
+                        icon.name: "document-open-folder"
+                        display: PlasmaComponents3.AbstractButton.IconOnly
+                        implicitWidth: 20
+                        implicitHeight: 20
+                        PlasmaComponents3.ToolTip.visible: hovered
+                        PlasmaComponents3.ToolTip.text: i18n("Open in Dolphin")
+                        onClicked: {
+                            if (mainRoot) mainRoot.openFolder();
+                        }
+                    }
                 }
             }
 
@@ -74,46 +101,6 @@ Item {
                 status: fullRoot.syncStatus
                 statusText: fullRoot.statusDescription
                 Layout.alignment: Qt.AlignVCenter
-            }
-        }
-
-        // Folder Path Row
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: folderRow.implicitHeight + Kirigami.Units.smallSpacing * 2
-            color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.05)
-            radius: Kirigami.Units.smallSpacing
-
-            RowLayout {
-                id: folderRow
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: Kirigami.Units.smallSpacing
-                anchors.rightMargin: Kirigami.Units.smallSpacing
-
-                Kirigami.Icon {
-                    source: "folder"
-                    implicitWidth: 16
-                    implicitHeight: 16
-                }
-
-                PlasmaComponents3.Label {
-                    text: fullRoot.resolvedSyncDir
-                    elide: Text.ElideMiddle
-                    Layout.fillWidth: true
-                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
-                }
-
-                PlasmaComponents3.ToolButton {
-                    icon.name: "document-open-folder"
-                    display: PlasmaComponents3.AbstractButton.IconOnly
-                    PlasmaComponents3.ToolTip.visible: hovered
-                    PlasmaComponents3.ToolTip.text: i18n("Open in Dolphin")
-                    onClicked: {
-                        if (mainRoot) mainRoot.openFolder();
-                    }
-                }
             }
         }
 
@@ -153,13 +140,14 @@ Item {
             PlasmaComponents3.Label {
                 text: i18n("Recent Activity")
                 font.bold: true
+                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.95
                 Layout.fillWidth: true
             }
 
             PlasmaComponents3.Label {
                 text: i18n("(%1)", fullRoot.activityModel ? fullRoot.activityModel.count : 0)
-                opacity: 0.6
-                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
+                opacity: 0.5
+                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
                 visible: fullRoot.activityModel && fullRoot.activityModel.count > 0
             }
 
@@ -167,6 +155,8 @@ Item {
                 icon.name: "edit-clear"
                 display: PlasmaComponents3.AbstractButton.IconOnly
                 visible: fullRoot.activityModel && fullRoot.activityModel.count > 0
+                implicitWidth: 20
+                implicitHeight: 20
                 PlasmaComponents3.ToolTip.visible: hovered
                 PlasmaComponents3.ToolTip.text: i18n("Clear activity log")
                 onClicked: {
@@ -199,13 +189,33 @@ Item {
                     }
                 }
 
-                Kirigami.PlaceholderMessage {
+                ColumnLayout {
                     anchors.centerIn: parent
-                    width: parent.width - Kirigami.Units.gridUnit * 2
                     visible: activityListView.count === 0
-                    icon.name: "state-sync"
-                    text: i18n("No recent synchronization events")
-                    explanation: i18n("Files synced by OneDrive will appear here.")
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Kirigami.Icon {
+                        source: "state-sync"
+                        implicitWidth: Kirigami.Units.iconSizes.large
+                        implicitHeight: Kirigami.Units.iconSizes.large
+                        opacity: 0.35
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: i18n("No recent activity")
+                        opacity: 0.6
+                        font.bold: true
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: i18n("Files synced by OneDrive will appear here.")
+                        opacity: 0.4
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                        Layout.alignment: Qt.AlignHCenter
+                    }
                 }
             }
         }
@@ -223,13 +233,15 @@ Item {
                     ? i18n("Service: %1", plasmoid.configuration.systemdService)
                     : i18n("Mode: Standalone CLI")
                 opacity: 0.5
-                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.78
                 Layout.fillWidth: true
             }
 
             PlasmaComponents3.ToolButton {
                 icon.name: "utilities-terminal"
                 display: PlasmaComponents3.AbstractButton.IconOnly
+                implicitWidth: 22
+                implicitHeight: 22
                 PlasmaComponents3.ToolTip.visible: hovered
                 PlasmaComponents3.ToolTip.text: i18n("View OneDrive Service Logs")
                 onClicked: {
@@ -240,6 +252,8 @@ Item {
             PlasmaComponents3.ToolButton {
                 icon.name: "configure"
                 display: PlasmaComponents3.AbstractButton.IconOnly
+                implicitWidth: 22
+                implicitHeight: 22
                 PlasmaComponents3.ToolTip.visible: hovered
                 PlasmaComponents3.ToolTip.text: i18n("Configure OneDrive Widget")
                 onClicked: {

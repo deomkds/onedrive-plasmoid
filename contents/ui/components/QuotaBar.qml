@@ -12,7 +12,7 @@ ColumnLayout {
     property string remainingFormatted: "0 GB"
     property bool loading: false
 
-    spacing: Kirigami.Units.smallSpacing
+    spacing: 3
     Layout.fillWidth: true
 
     RowLayout {
@@ -20,45 +20,37 @@ ColumnLayout {
 
         Kirigami.Icon {
             source: "drive-harddisk"
-            implicitWidth: 16
-            implicitHeight: 16
+            implicitWidth: 14
+            implicitHeight: 14
             Layout.alignment: Qt.AlignVCenter
         }
 
         PlasmaComponents3.Label {
-            text: i18n("Cloud Storage")
+            text: i18n("Storage")
             font.bold: true
-            Layout.fillWidth: true
+            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
         }
+
+        Item { Layout.fillWidth: true }
 
         PlasmaComponents3.Label {
             text: root.totalFormatted !== "0 GB"
-                ? i18n("%1 / %2 (%3%)", root.usedFormatted, root.totalFormatted, Math.round(root.percentUsed * 100))
+                ? (root.remainingFormatted !== "0 GB"
+                    ? i18n("%1 / %2 • %3 free", root.usedFormatted, root.totalFormatted, root.remainingFormatted)
+                    : i18n("%1 / %2 (%3%)", root.usedFormatted, root.totalFormatted, Math.round(root.percentUsed * 100)))
                 : i18n("Checking quota...")
             opacity: 0.75
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
+            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.82
         }
     }
 
     PlasmaComponents3.ProgressBar {
         id: progressBar
         Layout.fillWidth: true
+        Layout.preferredHeight: 6
         from: 0.0
         to: 1.0
         value: root.percentUsed
         indeterminate: root.loading && root.totalFormatted === "0 GB"
-    }
-
-    RowLayout {
-        Layout.fillWidth: true
-
-        PlasmaComponents3.Label {
-            text: root.remainingFormatted !== "0 GB"
-                ? i18n("Free space: %1", root.remainingFormatted)
-                : ""
-            opacity: 0.65
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
-            Layout.fillWidth: true
-        }
     }
 }

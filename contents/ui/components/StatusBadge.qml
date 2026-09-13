@@ -9,8 +9,8 @@ Rectangle {
     property string status: "idle" // "idle", "syncing", "suspended", "offline", "error"
     property string statusText: i18n("Ready")
 
-    implicitHeight: 28
-    implicitWidth: layout.implicitWidth + Kirigami.Units.largeSpacing
+    implicitHeight: 22
+    implicitWidth: layout.implicitWidth + Kirigami.Units.mediumSpacing
 
     radius: height / 2
 
@@ -50,13 +50,13 @@ Rectangle {
     RowLayout {
         id: layout
         anchors.centerIn: parent
-        spacing: Kirigami.Units.smallSpacing
+        spacing: 4
 
         PlasmaComponents3.BusyIndicator {
             visible: root.status === "syncing"
             running: root.status === "syncing"
-            implicitWidth: 14
-            implicitHeight: 14
+            implicitWidth: 12
+            implicitHeight: 12
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -76,15 +76,15 @@ Rectangle {
                     return "state-ok";
                 }
             }
-            implicitWidth: 14
-            implicitHeight: 14
+            implicitWidth: 12
+            implicitHeight: 12
             Layout.alignment: Qt.AlignVCenter
         }
 
         PlasmaComponents3.Label {
             text: root.statusText
             font.bold: true
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
+            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
             color: {
                 if (root.status === "syncing") {
                     return Kirigami.Theme.highlightedTextColor;
