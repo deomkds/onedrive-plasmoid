@@ -374,6 +374,27 @@ PlasmoidItem {
         execute("konsole -e journalctl --user -u " + service + " -f || xdg-open \"journalctl --user -u " + service + "\"");
     }
 
+    function openConfiguration() {
+        var action = null;
+        if (typeof plasmoid !== "undefined" && typeof plasmoid.internalAction === "function") {
+            action = plasmoid.internalAction("configure");
+        }
+        if (!action && typeof Plasmoid !== "undefined" && typeof Plasmoid.internalAction === "function") {
+            action = Plasmoid.internalAction("configure");
+        }
+        if (!action && typeof plasmoid !== "undefined" && typeof plasmoid.action === "function") {
+            action = plasmoid.action("configure");
+        }
+        if (!action && typeof Plasmoid !== "undefined" && typeof Plasmoid.action === "function") {
+            action = Plasmoid.action("configure");
+        }
+
+        if (action) {
+            root.expanded = false;
+            action.trigger();
+        }
+    }
+
     function clearActivityLog() {
         root.activityModel.clear();
     }

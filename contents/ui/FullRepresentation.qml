@@ -241,8 +241,11 @@ Item {
                 PlasmaComponents3.ToolTip.visible: hovered
                 PlasmaComponents3.ToolTip.text: i18n("Configure OneDrive Widget")
                 onClicked: {
-                    if (plasmoid.action("configure")) {
-                        plasmoid.action("configure").trigger();
+                    if (mainRoot && typeof mainRoot.openConfiguration === "function") {
+                        mainRoot.openConfiguration();
+                    } else if (typeof plasmoid !== "undefined" && typeof plasmoid.internalAction === "function") {
+                        var a = plasmoid.internalAction("configure");
+                        if (a) a.trigger();
                     }
                 }
             }
