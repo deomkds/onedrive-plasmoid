@@ -101,6 +101,13 @@ systemctl --user enable --now onedrive.service
 
 ---
 
+## Authors & Acknowledgments
+
+- **Author & Maintainer**: Marcus Vinícius ([@deomkds](https://github.com/deomkds) - `mv.cunha2009@gmail.com`)
+- **Acknowledgments**:
+  - **Daniel Borges de Oliveira**: Original author of the legacy `onedrive_tray` application.
+  - **abraunegg**: Creator and maintainer of the excellent [OneDrive Client for Linux](https://github.com/abraunegg/onedrive).
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 (GPL-3.0-or-later).

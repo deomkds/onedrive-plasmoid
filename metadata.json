@@ -3,7 +3,17 @@
     "KPlugin": {
         "Authors": [
             {
-                "Name": "Daniel Borges Oliveira",
+                "Name": "Marcus Vinícius",
+                "Email": "mv.cunha2009@gmail.com"
+            }
+        ],
+        "OtherContributors": [
+            {
+                "Name": "Daniel Borges de Oliveira",
+                "Email": ""
+            },
+            {
+                "Name": "abraunegg",
                 "Email": ""
             }
         ],
