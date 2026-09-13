@@ -1,115 +1,106 @@
-# Introduction
+# Microsoft OneDrive Plasmoid for KDE Plasma 6
 
-This is a simple program to create a system tray icon and display program status for onedrive client developed by abraunegg.
+A native, modern KDE Plasma 6 widget (Plasmoid) to monitor and control the [Microsoft OneDrive client for Linux by abraunegg](https://github.com/abraunegg/onedrive).
 
-Click with the left mouse button and the program shows the synchronization progress.
-Click with the right mouse button and a menu with the available options is shown.
-Click with the mid mouse button and the program shows the PID of the onedrive client.
+![KDE Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-blue?logo=kde)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
-The program was written using lib QT 5.13.0.
+---
 
-To use the program you must first compile and install the onedrive client available at https://github.com/abraunegg/onedrive.
+## Features
 
-# How to compile
+- **Native KDE Plasma 6 Experience**:
+  - Built with modern **QML, Kirigami, and PlasmaComponents3**.
+  - Adapts seamlessly to your desktop theme (Breeze Light, Breeze Dark, custom accent colors).
+  - Compact representation for your panel or system tray, with animated sync indicators and status emblems.
+  - Rich interactive pop-up (Full representation) with storage usage, activity log, and quick controls.
 
-The steps bellow should be suffice to compile the program:
+- **Storage Quota & Free Space**:
+  - Visual cloud storage bar showing used space, free space, total capacity, and percentage.
 
-```
-git clone https://github.com/DanielBorgesOliveira/onedrive_tray.git
+- **Quick Control Actions**:
+  - **Sync Now**: Trigger immediate synchronization under systemd or CLI.
+  - **Pause / Resume**: Suspend and restart synchronization on the fly.
+  - **Open Local Folder**: One-click opening of your local OneDrive directory in **Dolphin**.
+  - **Open on Web**: Direct shortcut to your OneDrive files in your browser.
+  - **View Logs**: Quick access to live systemd service logs.
 
-cd onedrive_tray
+- **Recent Activity Feed**:
+  - Real-time log of recently synced items (Uploaded, Downloaded, Deleted, Moved, Directories created).
+  - Click on any item to view/reveal it directly in Dolphin.
 
-mkdir build
+- **Dual Backend Architecture**:
+  - **Systemd User Service (Default & Recommended)**: Directly monitors and controls `onedrive.service` via systemd (`systemctl --user`).
+  - **Standalone Process Mode**: Fallback mode to monitor an active standalone `onedrive` process.
 
-cd build
+- **Plasmoid Settings**:
+  - Configurable polling intervals, custom directories, notification toggles, and icon styles (Breeze monochrome or official colored logo).
 
-qmake ../systray.pro
+---
 
-make
-```
+## Requirements
 
-This will create systray binary.
+1. **KDE Plasma 6** (KDE Plasma 6.0 or newer).
+2. **OneDrive Client for Linux (abraunegg)**:
+   - Install via your distribution's package manager:
+     - **Arch / Manjaro**: `sudo pacman -S onedrive`
+     - **Fedora**: `sudo dnf install onedrive`
+     - **Ubuntu / Debian**: `sudo apt install onedrive`
+   - Initial setup & authentication:
+     ```bash
+     onedrive
+     ```
+     Follow the instructions to log in with your Microsoft account.
 
-Tested with QT 5.12.6 and 5.13.0.
+---
 
-# How to execute
+## Installation
 
-First move the binary to your path:
+### Quick Install (User Mode)
 
-```
-sudo cp onedrive_tray /usr/local/bin/onedrive_tray
-```
+Run the included install script:
 
-If exists, move to your path the translation file corresponding to your country. For example for french users :
-
-```
-sudo cp onedrive_tray_fr.qm /usr/local/bin/onedrive_tray_fr.qm
-```
-
-Then execute the program:
-
-```
-onedrive_tray --onedrive-path [path to onedrive client] --onedrive-args [onedrive client arguments].
-```
-
-If you want the program to execute every time you log in you can put it in the auto start scripts.
-
-You can alternatively install with make:
-
-```
-sudo make install
-```
-
-This will include a systemd service that can be enabled to auto start the application:
-
-```
-systemctl enable --user onedrive_tray.service
+```bash
+./install.sh
 ```
 
-## Create a translation file
+This will register and install the applet into `~/.local/share/plasma/plasmoids/org.kde.plasma.onedrive`.
 
-- Modify the file systray.pro : on the line TRANSLATIONS, add the name of a new translation file (onedrive_tray_xx.ts where xx corresponds to your country).
+### Adding the Widget to your Panel / Desktop
 
-- In a terminal, go to the path where is your source code files and execute the command
+1. Right-click on your KDE Plasma panel or desktop.
+2. Select **Add Widgets...** (or press `Meta+W`).
+3. Search for **OneDrive**.
+4. Drag and drop it onto your panel or into your System Tray.
 
-```
-lupdate systray.pro
-```
+### Testing without Panel Placement
 
-If "lupdate" responds with the error “could not exec /usr/lib/x86_64-linux-gnu/qt5/bin/lupdate: No such file or directory” execute:
-```
-sudo apt-get install qttools5-dev-tools
-```
+You can test the plasmoid in a standalone test window anytime by running:
 
-This command initiates the onedrive_tray_xx.ts file.
-
-- Now execute the command
-
-```
-linguist
+```bash
+plasmawindowed org.kde.plasma.onedrive
 ```
 
-This command launches the application "linguist" to write the translations. First open your onedrive_tray_xx.ts file and write the translations. When your translations are done, save the file and release the file (menu File). The release action create the onedrive_tray_xx.qm file.
+---
 
-For more informations about the translation in Qt, you can visit the [Qt documentation](https://doc.qt.io/qt-5/qtlinguist-index.html).
+## Configuration & Usage
 
-## Configure proxy settings
+Right-click on the OneDrive icon in your panel or click the configure button in the pop-up to open settings:
 
-- If you execute the program directly from the command line, you can **set environment variables: "HTTP_PROXY" and "HTTPS_PROXY"** to let onedrive subprocess inherit these settings because of QT features.
+- **Operation Mode**: Choose between *Systemd User Service* (`onedrive.service`) or *Standalone CLI*.
+- **Local Sync Folder**: Specify your OneDrive folder (defaults to `~/OneDrive`).
+- **Check Interval**: Interval (in seconds) to check sync status and journal logs.
+- **Quota Refresh Interval**: Frequency to query cloud storage quota.
+- **Panel Icon Style**: Choose between adaptive Breeze monochrome or official blue cloud.
 
-- If you use the systemd service, you can achieve this by editing the "/usr/lib/systemd/user/onedrive_tray.service" file and add (please properly replace "ip.address:port" with your proxy settings)
+To enable the systemd service to run automatically on user login:
 
-  ```
-  Environment="HTTP_PROXY=http://ip.address:port"
-  Environment="HTTPS_PROXY=http://ip.address:port"
-  ```
+```bash
+systemctl --user enable --now onedrive.service
+```
 
-  to the "[Service]" section of the service unit file.
-  
-- Reference: Official onedrive_abraunegg document ([Link](https://github.com/abraunegg/onedrive/blob/master/docs/USAGE.md#access-onedrive-service-through-a-proxy)).
+---
 
-# Pre-compiled Binaries
+## License
 
-If you do not have the necessary knowledge to compile a Linux program or simply you have no patience to compile another package you can download a pre-compiled binary developed by the community. Bellow, there are some packages available.
-
-- This is an AUR package compile by [jugendhacker](https://github.com/jugendhacker) for ArchLinux. You can get it in [https://aur.archlinux.org/packages/onedrive_tray-git/](https://aur.archlinux.org/packages/onedrive_tray-git/).
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0-or-later).

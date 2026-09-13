@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+    <group name="General">
+        <entry name="serviceMode" type="String">
+            <label>Service execution mode (systemd or standalone)</label>
+            <default>systemd</default>
+        </entry>
+        <entry name="systemdService" type="String">
+            <label>Systemd user service unit name</label>
+            <default>onedrive.service</default>
+        </entry>
+        <entry name="onedriveBin" type="String">
+            <label>Path to onedrive executable</label>
+            <default>onedrive</default>
+        </entry>
+        <entry name="syncDir" type="String">
+            <label>Local OneDrive sync folder</label>
+            <default>~/OneDrive</default>
+        </entry>
+        <entry name="confDir" type="String">
+            <label>OneDrive configuration directory</label>
+            <default>~/.config/onedrive</default>
+        </entry>
+        <entry name="pollInterval" type="Int">
+            <label>Status polling interval in seconds</label>
+            <default>10</default>
+        </entry>
+        <entry name="quotaInterval" type="Int">
+            <label>Storage quota refresh interval in seconds</label>
+            <default>900</default>
+        </entry>
+        <entry name="showNotifications" type="Bool">
+            <label>Enable desktop notifications on sync events and errors</label>
+            <default>true</default>
+        </entry>
+        <entry name="webUrl" type="String">
+            <label>OneDrive web interface URL</label>
+            <default>https://onedrive.live.com</default>
+        </entry>
+        <entry name="iconStyle" type="String">
+            <label>Icon style (breeze or color)</label>
+            <default>breeze</default>
+        </entry>
+    </group>
+</kcfg>
