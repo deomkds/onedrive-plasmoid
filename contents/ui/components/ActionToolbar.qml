@@ -34,8 +34,8 @@ RowLayout {
 
     PlasmaComponents3.Button {
         id: pauseBtn
-        text: root.status === "suspended" ? i18n("Resume") : i18n("Pause")
-        icon.name: root.status === "suspended" ? "media-playback-start" : "media-playback-pause"
+        text: (root.status === "suspended" || root.status === "offline") ? i18n("Resume") : i18n("Pause")
+        icon.name: (root.status === "suspended" || root.status === "offline") ? "media-playback-start" : "media-playback-pause"
         enabled: !root.isBusy
         Layout.fillWidth: true
         Layout.preferredWidth: root.sharedActionWidth

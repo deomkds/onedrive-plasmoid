@@ -85,8 +85,9 @@ PlasmoidItem {
             onTriggered: root.triggerSync()
         },
         PlasmaCore.Action {
-            text: root.syncStatus === "suspended" ? i18n("Resume Synchronization") : i18n("Pause Synchronization")
-            icon.name: root.syncStatus === "suspended" ? "media-playback-start" : "media-playback-pause"
+            text: (root.syncStatus === "suspended" || root.syncStatus === "offline") ? i18n("Resume Synchronization") : i18n("Pause Synchronization")
+            icon.name: (root.syncStatus === "suspended" || root.syncStatus === "offline") ? "media-playback-start" : "media-playback-pause"
+            enabled: !root.isBusy
             onTriggered: root.togglePause()
         },
         PlasmaCore.Action {
@@ -175,6 +176,13 @@ PlasmoidItem {
         fetchRecentLogs();
     }
 
+    function resetPollInterval() {
+        var baseInterval = Math.max(5, plasmoid.configuration.pollInterval || 10) * 1000;
+        if (pollTimer.interval !== baseInterval) {
+            pollTimer.interval = baseInterval;
+        }
+    }
+
     // Status checking
     function checkStatus() {
         if (plasmoid.configuration.serviceMode === "systemd") {
@@ -182,6 +190,16 @@ PlasmoidItem {
             execute("systemctl --user is-active " + service, function(data) {
                 var stdout = (data["stdout"] || "").trim();
                 if (stdout === "active") {
+                    resetPollInterval();
+
+                    // Immediately update status if we were activating/offline/paused
+                    if (root.syncStatus !== "syncing") {
+                        root.syncStatus = "idle";
+                        if (root.statusDescription.indexOf("Stopped") !== -1 || root.statusDescription.indexOf("Starting") !== -1) {
+                            root.statusDescription = i18n("Active");
+                        }
+                    }
+
                     // Service is running, query status details
                     execute((plasmoid.configuration.onedriveBin || "onedrive") + " --display-sync-status", function(statusData) {
                         var out = (statusData["stdout"] || "");
@@ -198,18 +216,28 @@ PlasmoidItem {
                         }
                         root.lastSyncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     });
+                } else if (stdout === "activating" || stdout === "reloading") {
+                    root.syncStatus = "syncing";
+                    root.statusDescription = stdout === "reloading" ? i18n("Reloading...") : i18n("Starting...");
+                    // Poll faster while service is activating so plasmoid quickly reflects success
+                    pollTimer.interval = 2000;
+                    pollTimer.restart();
                 } else if (stdout === "inactive" || stdout === "deactivating") {
+                    resetPollInterval();
                     root.syncStatus = "suspended";
-                    root.statusDescription = i18n("Paused / Suspended");
+                    root.statusDescription = stdout === "deactivating" ? i18n("Stopping...") : i18n("Paused / Suspended");
                 } else if (stdout === "failed") {
+                    resetPollInterval();
                     root.syncStatus = "error";
                     root.statusDescription = i18n("Service Error");
                 } else {
+                    resetPollInterval();
                     root.syncStatus = "offline";
-                    root.statusDescription = i18n("Stopped (%1)", stdout || "inactive");
+                    root.statusDescription = i18n("Not running (%1)", stdout || "inactive");
                 }
             });
         } else {
+            resetPollInterval();
             // Standalone CLI mode
             execute("pgrep -x " + (plasmoid.configuration.onedriveBin || "onedrive"), function(data) {
                 var pid = (data["stdout"] || "").trim();
@@ -302,11 +330,14 @@ PlasmoidItem {
         var service = plasmoid.configuration.systemdService || "onedrive.service";
 
         if (root.syncStatus === "suspended" || root.syncStatus === "offline") {
+            root.syncStatus = "syncing";
+            root.statusDescription = i18n("Starting service...");
             execute("systemctl --user start " + service, function(data) {
                 root.isBusy = false;
                 checkStatus();
             });
         } else {
+            root.statusDescription = i18n("Stopping service...");
             execute("systemctl --user stop " + service, function(data) {
                 root.isBusy = false;
                 root.syncStatus = "suspended";
