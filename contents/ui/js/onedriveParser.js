@@ -105,14 +105,19 @@ function parseSyncStatus(output) {
 function cleanFileName(raw) {
     if (!raw) return "";
     var cleaned = raw.trim();
-    if (cleaned.endsWith(" ...")) {
-        cleaned = cleaned.substring(0, cleaned.length - 4);
-    }
-    return cleaned;
+    // Strip trailing "... done" or "...done" or "..."
+    cleaned = cleaned.replace(/\s*\.\.\.\s*done$/i, "");
+    cleaned = cleaned.replace(/\s*\.\.\.$/, "");
+    // Strip leading "./"
+    cleaned = cleaned.replace(/^\.\//, "");
+    // Strip surrounding quotes if any
+    cleaned = cleaned.replace(/^["']|["']$/g, "");
+    return cleaned.trim();
 }
 
 function parseLogEntries(logOutput) {
     var entries = [];
+    var entryMap = {}; // key: type + ":" + filePath -> entry index in entries
     if (!logOutput || typeof logOutput !== 'string') {
         return entries;
     }
@@ -125,7 +130,7 @@ function parseLogEntries(logOutput) {
         var timestamp = "";
         var content = line;
 
-        // If line has ISO timestamp e.g. 2026-09-13T18:50:00+0000 hostname onedrive[123]: message
+        // 1. Match ISO timestamp e.g. 2026-09-18T22:49:10-0300 hostname onedrive[123]: message
         var isoMatch = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[^\s]*)\s+[^:]+:\s*(.*)$/);
         if (isoMatch) {
             var d = new Date(isoMatch[1]);
@@ -133,6 +138,20 @@ function parseLogEntries(logOutput) {
                 timestamp = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
             content = isoMatch[2];
+        } else {
+            // 2. Match standard syslog format e.g. set 18 22:49:09 host proc[pid]: message or Sep 18 22:49:09 ...
+            var syslogMatch = line.match(/^[A-Za-zÀ-ÿ]+(?:\.?)\s+\d+\s+(\d{2}:\d{2}(?::\d{2})?)\s+[^:]+:\s*(.*)$/);
+            if (syslogMatch) {
+                var tParts = syslogMatch[1].split(':');
+                timestamp = tParts[0] + ":" + tParts[1];
+                content = syslogMatch[2];
+            } else {
+                // 3. Match process tag without timestamp e.g. onedrive[5485]: message
+                var procMatch = line.match(/^[^:\s]+\[\d+\]:\s*(.*)$/);
+                if (procMatch) {
+                    content = procMatch[1];
+                }
+            }
         }
 
         if (!timestamp) {
@@ -140,82 +159,128 @@ function parseLogEntries(logOutput) {
             timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        if (content.match(/Downloading (?:new |modified )?file\s+(.+)/i)) {
-            var dlMatch = content.match(/Downloading (?:new |modified )?file\s+(.+)/i);
-            var dlPath = cleanFileName(dlMatch[1]);
-            entries.push({
-                type: "download",
-                title: "Downloaded",
-                fileName: dlPath,
-                filePath: dlPath,
+        var entry = null;
+
+        // Progress line: Uploading / Downloading: <path> ... <pct>% | ETA <eta> (or | DONE in <duration>)
+        var progressMatch = content.match(/^(Uploading|Downloading):\s+(.+?)\s+\.\.\.\s+(\d+)%\s*(?:\|\s*(?:ETA\s+([^\s]+)|DONE(?:\s+in\s+([^\s]+))?))?/i);
+        // Completion line: Uploading / Downloading [new|modified] file: <path> ... done
+        var doneMatch = content.match(/^(Uploading|Downloading)\s+(?:new\s+|modified\s+)?file:\s*(.+)/i);
+
+        if (progressMatch) {
+            var dir = progressMatch[1].toLowerCase();
+            var pType = (dir === "uploading") ? "upload" : "download";
+            var pPath = cleanFileName(progressMatch[2]);
+            var pct = parseInt(progressMatch[3], 10);
+            var pEta = progressMatch[4] || "";
+            var pDoneIn = progressMatch[5] || "";
+            var pDone = (pct >= 100 || !!pDoneIn);
+
+            entry = {
+                type: pType,
+                title: pDone ? (pType === "upload" ? "Uploaded" : "Downloaded") : (pType === "upload" ? "Uploading (" + pct + "%)" : "Downloading (" + pct + "%)"),
+                fileName: pPath,
+                filePath: pPath,
                 time: timestamp,
-                icon: "download"
-            });
-        } else if (content.match(/Uploading (?:new |modified )?file\s+(.+)/i)) {
-            var upMatch = content.match(/Uploading (?:new |modified )?file\s+(.+)/i);
-            var upPath = cleanFileName(upMatch[1]);
-            entries.push({
-                type: "upload",
-                title: "Uploaded",
-                fileName: upPath,
-                filePath: upPath,
+                icon: pType,
+                progress: pct,
+                status: pDone ? "completed" : "in_progress",
+                eta: pDone ? "" : pEta
+            };
+        } else if (doneMatch) {
+            var dDir = doneMatch[1].toLowerCase();
+            var dType = (dDir === "uploading") ? "upload" : "download";
+            var dPath = cleanFileName(doneMatch[2]);
+            entry = {
+                type: dType,
+                title: (dType === "upload") ? "Uploaded" : "Downloaded",
+                fileName: dPath,
+                filePath: dPath,
                 time: timestamp,
-                icon: "upload"
-            });
+                icon: dType,
+                progress: 100,
+                status: "completed",
+                eta: ""
+            };
         } else if (content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i)) {
             var delMatch = content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i);
             var delPath = cleanFileName(delMatch[1]);
-            entries.push({
+            entry = {
                 type: "delete",
                 title: "Deleted",
                 fileName: delPath,
                 filePath: "",
                 time: timestamp,
-                icon: "edit-delete"
-            });
+                icon: "edit-delete",
+                progress: -1,
+                status: "completed",
+                eta: ""
+            };
         } else if (content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i)) {
             var moveMatch = content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i);
             var srcPath = cleanFileName(moveMatch[1]);
             var dstPath = cleanFileName(moveMatch[2]);
-            entries.push({
+            entry = {
                 type: "move",
                 title: "Moved/Renamed",
                 fileName: srcPath + " → " + dstPath,
                 filePath: dstPath,
                 time: timestamp,
-                icon: "edit-rename"
-            });
+                icon: "edit-rename",
+                progress: -1,
+                status: "completed",
+                eta: ""
+            };
         } else if (content.match(/Creating local directory:\s+(.+)/i)) {
             var mkdirMatch = content.match(/Creating local directory:\s+(.+)/i);
             var dirPath = cleanFileName(mkdirMatch[1]);
-            entries.push({
+            entry = {
                 type: "folder",
                 title: "Directory created",
                 fileName: dirPath,
                 filePath: dirPath,
                 time: timestamp,
-                icon: "folder-new"
-            });
-        } else if (content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on OneDrive)?$/i)) {
-            var rdirMatch = content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on OneDrive)?$/i);
+                icon: "folder-new",
+                progress: -1,
+                status: "completed",
+                eta: ""
+            };
+        } else if (content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on\s+(?:Microsoft\s+)?OneDrive)?$/i)) {
+            var rdirMatch = content.match(/Successfully created the remote directory\s+(.+?)(?:\s+on\s+(?:Microsoft\s+)?OneDrive)?$/i);
             var rPath = cleanFileName(rdirMatch[1]);
-            entries.push({
+            entry = {
                 type: "folder",
                 title: "Remote directory created",
                 fileName: rPath,
                 filePath: rPath,
                 time: timestamp,
-                icon: "folder-cloud"
-            });
+                icon: "folder-cloud",
+                progress: -1,
+                status: "completed",
+                eta: ""
+            };
         } else if (content.indexOf("ERROR:") !== -1 || content.indexOf("Error:") !== -1) {
-            entries.push({
+            entry = {
                 type: "error",
                 title: "Error",
                 fileName: content.substring(content.indexOf("rror:") + 5).trim(),
                 filePath: "",
                 time: timestamp,
-                icon: "dialog-error"
-            });
+                icon: "dialog-error",
+                progress: -1,
+                status: "error",
+                eta: ""
+            };
+        }
+
+        if (entry) {
+            var key = entry.type + ":" + (entry.filePath || entry.fileName);
+            if (entryMap.hasOwnProperty(key)) {
+                var existingIdx = entryMap[key];
+                entries[existingIdx] = entry;
+            } else {
+                entryMap[key] = entries.length;
+                entries.push(entry);
+            }
         }
     }
 

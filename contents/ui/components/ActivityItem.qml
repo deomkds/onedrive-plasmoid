@@ -12,6 +12,9 @@ Rectangle {
     property string filePath: ""
     property string time: ""
     property string operationType: "info"
+    property int progress: -1
+    property string status: ""
+    property string eta: ""
 
     signal itemClicked(string file)
 
@@ -56,7 +59,28 @@ Rectangle {
                 Layout.fillWidth: true
 
                 PlasmaComponents3.Label {
-                    text: root.operationTitle
+                    text: {
+                        if (root.status === "in_progress" && root.progress >= 0) {
+                            if (root.operationType === "upload") {
+                                return i18n("Uploading (%1%)", root.progress);
+                            } else if (root.operationType === "download") {
+                                return i18n("Downloading (%1%)", root.progress);
+                            }
+                        }
+                        if (root.operationTitle) {
+                            switch (root.operationTitle) {
+                            case "Uploaded": return i18n("Uploaded");
+                            case "Downloaded": return i18n("Downloaded");
+                            case "Deleted": return i18n("Deleted");
+                            case "Moved/Renamed": return i18n("Moved / Renamed");
+                            case "Directory created": return i18n("Directory created");
+                            case "Remote directory created": return i18n("Remote directory created");
+                            case "Error": return i18n("Error");
+                            default: return root.operationTitle;
+                            }
+                        }
+                        return "";
+                    }
                     font.bold: true
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
                     color: {
@@ -65,7 +89,6 @@ Rectangle {
                         case "download":
                             return Kirigami.Theme.highlightColor;
                         case "delete":
-                            return Kirigami.Theme.negativeTextColor || "#e74c3c";
                         case "error":
                             return Kirigami.Theme.negativeTextColor || "#e74c3c";
                         default:
@@ -77,9 +100,19 @@ Rectangle {
                 Item { Layout.fillWidth: true }
 
                 PlasmaComponents3.Label {
-                    text: root.time
-                    opacity: 0.5
+                    text: {
+                        if (root.status === "in_progress" && root.progress >= 0) {
+                            if (root.eta && root.eta !== "--:--:--") {
+                                return i18n("ETA %1", root.eta);
+                            }
+                            return root.progress + "%";
+                        }
+                        return root.time;
+                    }
+                    opacity: root.status === "in_progress" ? 0.9 : 0.5
+                    font.bold: root.status === "in_progress"
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                    color: root.status === "in_progress" ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
                 }
             }
 
@@ -89,6 +122,17 @@ Rectangle {
                 Layout.fillWidth: true
                 font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
                 opacity: 0.9
+            }
+
+            PlasmaComponents3.ProgressBar {
+                Layout.fillWidth: true
+                Layout.topMargin: 2
+                Layout.bottomMargin: 2
+                Layout.preferredHeight: 4
+                from: 0
+                to: 100
+                value: Math.max(0, root.progress)
+                visible: root.status === "in_progress" && root.progress >= 0 && root.progress < 100
             }
         }
 

@@ -167,6 +167,9 @@ Item {
                     filePath: model.filePath || model.fileName || ""
                     time: model.time || ""
                     iconName: model.icon || ""
+                    progress: (typeof model.progress !== "undefined" && model.progress !== null) ? model.progress : -1
+                    status: model.status || ""
+                    eta: model.eta || ""
 
                     onItemClicked: function(file) {
                         if (mainRoot) mainRoot.openFileOrFolder(file);

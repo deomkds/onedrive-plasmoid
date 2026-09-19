@@ -177,6 +177,17 @@ PlasmoidItem {
     }
 
     function resetPollInterval() {
+        // If there are active file transfers, keep faster polling
+        for (var a = 0; a < Math.min(15, root.activityModel.count); a++) {
+            var it = root.activityModel.get(a);
+            if (it && it.status === "in_progress") {
+                if (pollTimer.interval !== 2000) {
+                    pollTimer.interval = 2000;
+                    pollTimer.restart();
+                }
+                return;
+            }
+        }
         var baseInterval = Math.max(5, plasmoid.configuration.pollInterval || 10) * 1000;
         if (pollTimer.interval !== baseInterval) {
             pollTimer.interval = baseInterval;
@@ -271,30 +282,60 @@ PlasmoidItem {
     // Recent activity log reading
     function fetchRecentLogs() {
         var service = plasmoid.configuration.systemdService || "onedrive.service";
-        var cmd = "journalctl --user -u " + service + " -n 35 --output=short-iso --no-pager";
+        var cmd = "journalctl --user -u " + service + " -n 50 --output=short-iso --no-pager";
 
         execute(cmd, function(data) {
             if (data && data["stdout"]) {
                 var entries = OneDriveParser.parseLogEntries(data["stdout"]);
                 if (entries.length > 0) {
-                    for (var i = entries.length - 1; i >= 0; i--) {
+                    var hasActiveTransfers = false;
+                    for (var i = 0; i < entries.length; i++) {
                         var e = entries[i];
+                        if (e.status === "in_progress") {
+                            hasActiveTransfers = true;
+                        }
+
                         // Check if already in model
-                        var exists = false;
-                        for (var j = 0; j < Math.min(10, root.activityModel.count); j++) {
+                        var foundIndex = -1;
+                        for (var j = 0; j < Math.min(20, root.activityModel.count); j++) {
                             var current = root.activityModel.get(j);
-                            if (current && current.fileName === e.fileName && current.type === e.type) {
-                                exists = true;
+                            if (current && (current.fileName === e.fileName || (current.filePath && current.filePath === e.filePath)) && current.type === e.type) {
+                                foundIndex = j;
                                 break;
                             }
                         }
-                        if (!exists) {
+
+                        if (foundIndex !== -1) {
+                            var existing = root.activityModel.get(foundIndex);
+                            if (existing.status === "completed" && e.status === "in_progress") {
+                                root.activityModel.remove(foundIndex);
+                                root.activityModel.insert(0, e);
+                            } else if (existing.progress !== e.progress || existing.status !== e.status || existing.eta !== e.eta || existing.title !== e.title) {
+                                root.activityModel.setProperty(foundIndex, "progress", e.progress);
+                                root.activityModel.setProperty(foundIndex, "status", e.status);
+                                root.activityModel.setProperty(foundIndex, "eta", e.eta);
+                                root.activityModel.setProperty(foundIndex, "title", e.title);
+                                root.activityModel.setProperty(foundIndex, "time", e.time);
+                            }
+                        } else {
                             root.activityModel.insert(0, e);
                         }
                     }
+
                     // Limit model size
                     while (root.activityModel.count > 40) {
                         root.activityModel.remove(root.activityModel.count - 1);
+                    }
+
+                    if (hasActiveTransfers) {
+                        if (root.syncStatus !== "syncing") {
+                            root.syncStatus = "syncing";
+                            root.statusDescription = i18n("Synchronizing...");
+                        }
+                        if (pollTimer.interval > 2000) {
+                            pollTimer.interval = 2000;
+                            pollTimer.restart();
+                        }
                     }
                 }
             }
