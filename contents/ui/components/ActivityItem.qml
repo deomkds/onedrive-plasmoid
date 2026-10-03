@@ -18,11 +18,82 @@ Rectangle {
 
     signal itemClicked(string file)
 
+    readonly property string formattedTitle: {
+        if (root.status === "in_progress" && root.progress >= 0) {
+            if (root.operationType === "upload") {
+                return i18n("Uploading (%1%)", root.progress);
+            } else if (root.operationType === "download") {
+                return i18n("Downloading (%1%)", root.progress);
+            }
+        }
+        if (root.operationTitle) {
+            switch (root.operationTitle) {
+            case "Uploaded": return i18n("Uploaded");
+            case "Downloaded": return i18n("Downloaded");
+            case "Deleted": return i18n("Deleted");
+            case "Moved/Renamed": return i18n("Moved / Renamed");
+            case "Directory created": return i18n("Directory created");
+            case "Remote directory created": return i18n("Remote directory created");
+            case "Error": return i18n("Error");
+            default: return root.operationTitle;
+            }
+        }
+        return "";
+    }
+
+    readonly property string fullTooltipText: {
+        var lines = [];
+
+        if (root.operationType === "error") {
+            var errMsg = root.fileName || root.formattedTitle || i18n("Error");
+            if (!errMsg.toLowerCase().startsWith("error")) {
+                lines.push(i18n("Error: %1", errMsg));
+            } else {
+                lines.push(errMsg);
+            }
+        } else {
+            var title = root.formattedTitle;
+            if (title && root.fileName) {
+                lines.push(title + ": " + root.fileName);
+            } else if (root.fileName) {
+                lines.push(root.fileName);
+            } else if (title) {
+                lines.push(title);
+            }
+        }
+
+        if (root.status === "in_progress" && root.progress >= 0 && root.eta && root.eta !== "--:--:--") {
+            lines.push(i18n("ETA: %1", root.eta));
+        }
+
+        if (root.time) {
+            lines.push(i18n("Time: %1", root.time));
+        }
+
+        return lines.join("\n");
+    }
+
+    PlasmaComponents3.ToolTip.visible: mouseArea.containsMouse && (!openFolderButton.visible || !openFolderButton.hovered) && PlasmaComponents3.ToolTip.text !== ""
+    PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
+    PlasmaComponents3.ToolTip.text: root.fullTooltipText
+
     implicitHeight: layout.implicitHeight + Kirigami.Units.smallSpacing * 2
     Layout.fillWidth: true
 
     radius: Kirigami.Units.smallSpacing
     color: mouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.1) : "transparent"
+
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton
+        onClicked: {
+            if (root.operationType !== "error" && root.operationType !== "delete") {
+                root.itemClicked(root.filePath || root.fileName);
+            }
+        }
+    }
 
     RowLayout {
         id: layout
@@ -59,28 +130,7 @@ Rectangle {
                 Layout.fillWidth: true
 
                 PlasmaComponents3.Label {
-                    text: {
-                        if (root.status === "in_progress" && root.progress >= 0) {
-                            if (root.operationType === "upload") {
-                                return i18n("Uploading (%1%)", root.progress);
-                            } else if (root.operationType === "download") {
-                                return i18n("Downloading (%1%)", root.progress);
-                            }
-                        }
-                        if (root.operationTitle) {
-                            switch (root.operationTitle) {
-                            case "Uploaded": return i18n("Uploaded");
-                            case "Downloaded": return i18n("Downloaded");
-                            case "Deleted": return i18n("Deleted");
-                            case "Moved/Renamed": return i18n("Moved / Renamed");
-                            case "Directory created": return i18n("Directory created");
-                            case "Remote directory created": return i18n("Remote directory created");
-                            case "Error": return i18n("Error");
-                            default: return root.operationTitle;
-                            }
-                        }
-                        return "";
-                    }
+                    text: root.formattedTitle
                     font.bold: true
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
                     color: {
@@ -137,6 +187,7 @@ Rectangle {
         }
 
         PlasmaComponents3.ToolButton {
+            id: openFolderButton
             icon.name: "folder-open"
             display: PlasmaComponents3.AbstractButton.IconOnly
             visible: mouseArea.containsMouse && root.operationType !== "error" && root.operationType !== "delete"
@@ -145,18 +196,6 @@ Rectangle {
             PlasmaComponents3.ToolTip.visible: hovered
             PlasmaComponents3.ToolTip.text: i18n("Open in File Manager")
             onClicked: root.itemClicked(root.filePath || root.fileName)
-        }
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
-        onClicked: {
-            if (root.operationType !== "error" && root.operationType !== "delete") {
-                root.itemClicked(root.filePath || root.fileName);
-            }
         }
     }
 }
