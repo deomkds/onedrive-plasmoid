@@ -18,13 +18,19 @@ Rectangle {
         switch (root.status) {
         case "syncing":
             return Kirigami.Theme.highlightColor;
-        case "idle":
-            return Kirigami.Theme.positiveTextColor ? Qt.alpha(Kirigami.Theme.positiveTextColor, 0.15) : Qt.rgba(0.2, 0.8, 0.2, 0.15);
-        case "suspended":
-            return Kirigami.Theme.neutralTextColor ? Qt.alpha(Kirigami.Theme.neutralTextColor, 0.15) : Qt.rgba(0.9, 0.7, 0.1, 0.15);
+        case "idle": {
+            var pos = Kirigami.Theme.positiveTextColor;
+            return (pos && pos.r !== undefined) ? Qt.rgba(pos.r, pos.g, pos.b, 0.15) : Qt.rgba(0.2, 0.8, 0.2, 0.15);
+        }
+        case "suspended": {
+            var neu = Kirigami.Theme.neutralTextColor;
+            return (neu && neu.r !== undefined) ? Qt.rgba(neu.r, neu.g, neu.b, 0.15) : Qt.rgba(0.9, 0.7, 0.1, 0.15);
+        }
         case "error":
-        case "offline":
-            return Kirigami.Theme.negativeTextColor ? Qt.alpha(Kirigami.Theme.negativeTextColor, 0.15) : Qt.rgba(0.9, 0.2, 0.2, 0.15);
+        case "offline": {
+            var neg = Kirigami.Theme.negativeTextColor;
+            return (neg && neg.r !== undefined) ? Qt.rgba(neg.r, neg.g, neg.b, 0.15) : Qt.rgba(0.9, 0.2, 0.2, 0.15);
+        }
         default:
             return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1);
         }

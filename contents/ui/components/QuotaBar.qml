@@ -34,8 +34,8 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         PlasmaComponents3.Label {
-            text: root.totalFormatted !== "0 GB"
-                ? (root.remainingFormatted !== "0 GB"
+            text: (root.totalFormatted && root.totalFormatted !== "0 GB")
+                ? ((root.remainingFormatted && root.remainingFormatted !== "0 GB")
                     ? i18n("%1 / %2 • %3 free", root.usedFormatted, root.totalFormatted, root.remainingFormatted)
                     : i18n("%1 / %2 (%3%)", root.usedFormatted, root.totalFormatted, Math.round(root.percentUsed * 100)))
                 : i18n("Checking quota...")

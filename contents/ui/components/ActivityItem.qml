@@ -21,9 +21,9 @@ Rectangle {
     readonly property string formattedTitle: {
         if (root.status === "in_progress" && root.progress >= 0) {
             if (root.operationType === "upload") {
-                return i18n("Uploading (%1%)", root.progress);
+                return i18n("Uploading");
             } else if (root.operationType === "download") {
-                return i18n("Downloading (%1%)", root.progress);
+                return i18n("Downloading");
             }
         }
         if (root.operationTitle) {

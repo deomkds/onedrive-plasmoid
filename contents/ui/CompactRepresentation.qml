@@ -16,11 +16,13 @@ Item {
         property bool wasExpanded: false
 
         onPressed: mouse => {
-            wasExpanded = compactRoot.plasmoidItem.expanded;
+            wasExpanded = compactRoot.plasmoidItem ? compactRoot.plasmoidItem.expanded : false;
         }
 
         onClicked: mouse => {
-            compactRoot.plasmoidItem.expanded = !wasExpanded;
+            if (compactRoot.plasmoidItem) {
+                compactRoot.plasmoidItem.expanded = !wasExpanded;
+            }
         }
     }
 
@@ -37,7 +39,7 @@ Item {
             active: mouseArea.containsMouse
             isMask: {
                 var s = plasmoid.configuration.iconStyle;
-                return s === "onedrive-monochrome" || s === "folder-onedrive-symbolic" || s === "cloudstatus";
+                return s === "onedrive-monochrome" || s === "folder-onedrive-symbolic" || s === "cloudstatus" || s === "cloud";
             }
         }
 

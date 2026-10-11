@@ -7,7 +7,7 @@ import org.kde.kcmutils as KCMUtils
 KCMUtils.SimpleKCM {
     id: root
 
-    property alias cfg_serviceMode: serviceModeCombo.currentValue
+    property string cfg_serviceMode: "systemd"
     property alias cfg_systemdService: systemdServiceField.text
     property alias cfg_onedriveBin: onedriveBinField.text
     property alias cfg_syncDir: syncDirField.text
@@ -26,14 +26,15 @@ KCMUtils.SimpleKCM {
                 { text: i18n("Systemd User Service (Recommended)"), value: "systemd" },
                 { text: i18n("Standalone Process / CLI Monitor"), value: "standalone" }
             ]
-            currentIndex: plasmoid.configuration.serviceMode === "standalone" ? 1 : 0
+            currentIndex: indexOfValue(root.cfg_serviceMode) >= 0 ? indexOfValue(root.cfg_serviceMode) : 0
+            onActivated: root.cfg_serviceMode = currentValue
         }
 
         QQC2.TextField {
             id: systemdServiceField
             Kirigami.FormData.label: i18n("Systemd service unit:")
             text: plasmoid.configuration.systemdService
-            visible: serviceModeCombo.currentValue === "systemd"
+            visible: root.cfg_serviceMode === "systemd"
             placeholderText: "onedrive.service"
         }
 

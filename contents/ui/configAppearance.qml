@@ -7,7 +7,7 @@ import org.kde.kcmutils as KCMUtils
 KCMUtils.SimpleKCM {
     id: root
 
-    property alias cfg_iconStyle: iconStyleCombo.currentValue
+    property string cfg_iconStyle: "onedrive"
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -22,15 +22,8 @@ KCMUtils.SimpleKCM {
                 { text: i18n("Breeze Cloud Symbolic"), value: "cloudstatus" },
                 { text: i18n("Folder OneDrive Icon (Color)"), value: "folder-onedrive" }
             ]
-            currentIndex: {
-                var current = plasmoid.configuration.iconStyle || "onedrive";
-                for (var i = 0; i < model.length; ++i) {
-                    if (model[i].value === current) {
-                        return i;
-                    }
-                }
-                return 0;
-            }
+            currentIndex: indexOfValue(root.cfg_iconStyle) >= 0 ? indexOfValue(root.cfg_iconStyle) : 0
+            onActivated: root.cfg_iconStyle = currentValue
         }
     }
 }
