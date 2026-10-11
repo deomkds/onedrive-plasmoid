@@ -131,6 +131,12 @@ PlasmoidItem {
         executable.run(cmd, callback);
     }
 
+    // Helper to safely escape arguments for shell execution
+    function escapeShellArg(arg) {
+        if (!arg) return "''";
+        return "'" + ("" + arg).replace(/'/g, "'\\''") + "'";
+    }
+
     // Helper to resolve ~ in paths
     function resolvePath(p) {
         if (!p) return "";
@@ -250,7 +256,9 @@ PlasmoidItem {
         } else {
             resetPollInterval();
             // Standalone CLI mode
-            execute("pgrep -x " + (plasmoid.configuration.onedriveBin || "onedrive"), function(data) {
+            var rawBin = (plasmoid.configuration.onedriveBin || "onedrive").trim();
+            var binName = rawBin.split("/").pop().replace(/["']/g, "").trim() || "onedrive";
+            execute("pgrep -x " + escapeShellArg(binName), function(data) {
                 var pid = (data["stdout"] || "").trim();
                 if (pid !== "") {
                     root.syncStatus = "idle";
@@ -405,8 +413,8 @@ PlasmoidItem {
             cleanTarget = parts[parts.length - 1].trim();
         }
 
-        // Remove surrounding quotes and accidental leading slashes
-        cleanTarget = cleanTarget.replace(/^["']|["']$/g, "").replace(/^\/+/, "");
+        // Remove surrounding quotes, relative ./ prefix, and accidental leading slashes
+        cleanTarget = cleanTarget.replace(/^["']|["']$/g, "").replace(/^\.\//, "").replace(/^\/+/, "");
 
         var syncDir = root.resolvedSyncDir;
         var fullPath = "";
@@ -420,8 +428,8 @@ PlasmoidItem {
         // 1. If file exists, select it with dolphin
         // 2. If file missing but parent directory exists, open directory
         // 3. If neither exists, fallback cleanly to sync directory
-        var script = 'f="' + fullPath.replace(/"/g, '\\"') + '"; ' +
-                     's="' + syncDir.replace(/"/g, '\\"') + '"; ' +
+        // Positional parameters $1 (fullPath) and $2 (syncDir) prevent arbitrary shell code execution
+        var script = 'f="$1"; s="$2"; ' +
                      'if [ -e "$f" ]; then ' +
                      '  dolphin --select "$f" 2>/dev/null || xdg-open "$f" 2>/dev/null || xdg-open "$s" 2>/dev/null; ' +
                      'else ' +
@@ -433,7 +441,7 @@ PlasmoidItem {
                      '  fi; ' +
                      'fi';
 
-        execute("sh -c '" + script.replace(/'/g, "'\\''") + "'");
+        execute("sh -c " + escapeShellArg(script) + " _ " + escapeShellArg(fullPath) + " " + escapeShellArg(syncDir));
     }
 
     function openWeb() {

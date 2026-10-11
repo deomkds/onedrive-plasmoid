@@ -1,27 +1,14 @@
 # Bug Report — onedrive-plasmoid (Data Logic & Parsing) — 2026-10-11
 
 ## Summary
-- Critical: 2 open, 0 fixed
+- Critical: 0 open, 2 fixed
 - Intermediate: 11 open, 0 fixed
 - Normal: 7 open, 0 fixed
 
 ## 🔴 Critical
+*(All critical bugs resolved)*
 
-### BUG-001: Arbitrary Code Execution and Variable Expansion via Synced File Names in File Click Handler
-- **File:** contents/ui/main.qml:423
-- **Issue:** `openFileOrFolder` constructs a shell script by directly concatenating `fullPath` into double quotes (`f="' + fullPath.replace(/"/g, '\\"') + '";`) executed via `sh -c`. Double quotes in shell scripts evaluate parameter expansions (`$FOO`), command substitutions (`$(cmd)` and `` `cmd` ``), and arithmetic expansions. Any synced file name with shell metacharacters triggers arbitrary shell command execution when clicked, while files with `$` (e.g. `Budget$2024.xlsx`) have their paths expanded and corrupted. Furthermore, a trailing backslash escapes the closing quote and causes a shell syntax error.
-- **Trigger:** User clicks on an activity feed item corresponding to a file whose name contains `$()`, `` ` ``, `$`, or a trailing backslash.
-- **Impact:** Arbitrary code execution from files synced from remote OneDrive accounts, and failure to open legitimate files with `$` in their names.
-- **Suggested Fix:** Avoid constructing shell scripts with string interpolation. Instead, pass paths as separate positional arguments to `sh -c '...' -- "$fullPath" "$syncDir"` and reference `"$1"` and `"$2"`, or use single-quote escaping for literals.
-- **Status:** Open
 
-### BUG-002: Standalone Mode Fails to Detect Running Process When Given Binary Path
-- **File:** contents/ui/main.qml:253
-- **Issue:** In standalone CLI mode, `checkStatus()` runs `pgrep -x " + (plasmoid.configuration.onedriveBin || "onedrive")`. The configuration schema and UI label explicitly prompt the user for the "Path to onedrive executable" (e.g. `/usr/bin/onedrive`). `pgrep -x` matches process command names (`COMM`, maximum 15 characters), never executable paths.
-- **Trigger:** Setting `onedriveBin` to a full path such as `/usr/bin/onedrive` while `serviceMode` is set to standalone.
-- **Impact:** The plasmoid permanently reports "Not running" (offline) even when OneDrive is active and running.
-- **Suggested Fix:** Extract the basename of `onedriveBin` prior to running `pgrep -x`, or check with `pidof` / `pgrep -f`.
-- **Status:** Open
 
 ## 🟡 Intermediate
 
@@ -172,4 +159,22 @@
 - **Status:** Open
 
 ## ✅ Resolved
-*(No resolved bugs yet)*
+
+### BUG-001: Arbitrary Code Execution and Variable Expansion via Synced File Names in File Click Handler — Fixed 2026-10-11
+- **File:** contents/ui/main.qml:423
+- **Issue:** `openFileOrFolder` constructs a shell script by directly concatenating `fullPath` into double quotes (`f="' + fullPath.replace(/"/g, '\\"') + '";`) executed via `sh -c`. Double quotes in shell scripts evaluate parameter expansions (`$FOO`), command substitutions (`$(cmd)` and `` `cmd` ``), and arithmetic expansions. Any synced file name with shell metacharacters triggers arbitrary shell command execution when clicked, while files with `$` (e.g. `Budget$2024.xlsx`) have their paths expanded and corrupted. Furthermore, a trailing backslash escapes the closing quote and causes a shell syntax error.
+- **Trigger:** User clicks on an activity feed item corresponding to a file whose name contains `$()`, `` ` ``, `$`, or a trailing backslash.
+- **Impact:** Arbitrary code execution from files synced from remote OneDrive accounts, and failure to open legitimate files with `$` in their names.
+- **Suggested Fix:** Avoid constructing shell scripts with string interpolation. Instead, pass paths as separate positional arguments to `sh -c '...' -- "$fullPath" "$syncDir"` and reference `"$1"` and `"$2"`, or use single-quote escaping for literals.
+- **Fix Applied:** Implemented `escapeShellArg()` utility in `main.qml` and refactored `openFileOrFolder()` to execute `sh -c` passing `fullPath` and `syncDir` as positional arguments (`$1` and `$2`), completely preventing command injection and variable expansion.
+- **Status:** Resolved
+
+### BUG-002: Standalone Mode Fails to Detect Running Process When Given Binary Path — Fixed 2026-10-11
+- **File:** contents/ui/main.qml:253
+- **Issue:** In standalone CLI mode, `checkStatus()` runs `pgrep -x " + (plasmoid.configuration.onedriveBin || "onedrive")`. The configuration schema and UI label explicitly prompt the user for the "Path to onedrive executable" (e.g. `/usr/bin/onedrive`). `pgrep -x` matches process command names (`COMM`, maximum 15 characters), never executable paths.
+- **Trigger:** Setting `onedriveBin` to a full path such as `/usr/bin/onedrive` while `serviceMode` is set to standalone.
+- **Impact:** The plasmoid permanently reports "Not running" (offline) even when OneDrive is active and running.
+- **Suggested Fix:** Extract the basename of `onedriveBin` prior to running `pgrep -x`, or check with `pidof` / `pgrep -f`.
+- **Fix Applied:** Extracted the executable basename using `rawBin.split("/").pop().replace(/["']/g, "").trim()` and escaped the argument with `escapeShellArg()` before running `pgrep -x`.
+- **Status:** Resolved
+
