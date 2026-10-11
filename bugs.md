@@ -1,18 +1,71 @@
-# Bug Report — onedrive-plasmoid (Data Logic & Parsing) — 2026-10-11
+# Bug Report — onedrive-plasmoid (Visual UI & Components) — 2026-10-11
 
 ## Summary
-- Critical: 0 open, 2 fixed
-- Intermediate: 0 open, 11 fixed
-- Normal: 0 open, 7 fixed
+- Critical: 3 open, 2 fixed
+- Intermediate: 1 open, 11 fixed
+- Normal: 3 open, 7 fixed
 
 ## 🔴 Critical
-*(All critical bugs resolved)*
+
+### BUG-021: Runtime TypeError Calling Nonexistent `Qt.alpha()` in Status Badge
+- **File:** contents/ui/components/StatusBadge.qml:22
+- **Issue:** Lines 22, 24, and 27 attempt to compute badge background colors using `Qt.alpha(color, 0.15)`. `Qt.alpha` does not exist in Qt/QML (`typeof Qt.alpha === 'undefined'`). Evaluating this expression at runtime throws `TypeError: Property 'alpha' of object [object Object] is not a function`.
+- **Trigger:** Rendering `StatusBadge` in `FullRepresentation.qml` whenever status is `"idle"`, `"suspended"`, `"error"`, or `"offline"`.
+- **Impact:** Throws unhandled JavaScript exceptions in the Plasma runtime and fails to set the intended transparent badge background color.
+- **Suggested Fix:** Replace `Qt.alpha(c, a)` with `Qt.rgba(c.r, c.g, c.b, a)`.
+- **Status:** Open
+
+### BUG-022: Read-Only `currentValue` Alias in `configGeneral.qml` Breaks Operation Mode Configuration
+- **File:** contents/ui/configGeneral.qml:10
+- **Issue:** `property alias cfg_serviceMode: serviceModeCombo.currentValue` aliases `cfg_serviceMode` to `ComboBox.currentValue`. In Qt Quick Controls 2, `currentValue` is a read-only property. When the Plasma KCM configuration framework initializes, resets defaults, or synchronizes settings, assigning to `cfg_serviceMode` throws `TypeError: Cannot assign to read-only property "cfg_serviceMode"`.
+- **Trigger:** Opening the widget configuration dialog or clicking "Defaults" on the General tab.
+- **Impact:** Operation mode settings cannot be saved, restored, or managed by the Plasma KCM framework; throws runtime errors.
+- **Suggested Fix:** Declare a writable `property string cfg_serviceMode: "systemd"` on root and bind `serviceModeCombo.currentIndex: indexOfValue(root.cfg_serviceMode)` with `onActivated: root.cfg_serviceMode = currentValue`.
+- **Status:** Open
+
+### BUG-023: Read-Only `currentValue` Alias in `configAppearance.qml` Breaks Icon Style Configuration
+- **File:** contents/ui/configAppearance.qml:10
+- **Issue:** `property alias cfg_iconStyle: iconStyleCombo.currentValue` aliases `cfg_iconStyle` to read-only `ComboBox.currentValue`. Same failure mode as BUG-022: assigning to `cfg_iconStyle` fails with `TypeError: Cannot assign to read-only property "cfg_iconStyle"`.
+- **Trigger:** Opening the Appearance configuration tab or selecting an icon style.
+- **Impact:** Icon style configuration cannot be saved or restored properly through the Plasma settings system.
+- **Suggested Fix:** Declare a writable `property string cfg_iconStyle: "onedrive"` on root and bind `iconStyleCombo.currentIndex: indexOfValue(root.cfg_iconStyle)` with `onActivated: root.cfg_iconStyle = currentValue`.
+- **Status:** Open
 
 ## 🟡 Intermediate
-*(All intermediate bugs resolved)*
+
+### BUG-024: Empty `remainingFormatted` Renders Broken Text in `QuotaBar.qml`
+- **File:** contents/ui/components/QuotaBar.qml:39
+- **Issue:** Line 39 checks `root.remainingFormatted !== "0 GB"`, but does not verify whether `root.remainingFormatted !== ""`. When `remainingFormatted` is empty string (its default initial value), the condition evaluates to true, rendering `"%1 / %2 •  free"`.
+- **Trigger:** Displaying storage quota before free space has been reported or when free space is empty.
+- **Impact:** Storage header displays a broken string with a dangling bullet: `"0 GB / 1054.00 GB •  free"`.
+- **Suggested Fix:** Update the condition to check both `root.remainingFormatted !== "0 GB"` and `root.remainingFormatted !== ""`.
+- **Status:** Open
 
 ## 🟢 Normal
-*(All normal bugs resolved)*
+
+### BUG-025: Redundant Percentage Display in Activity Item Title
+- **File:** contents/ui/components/ActivityItem.qml:24
+- **Issue:** When `status === "in_progress"`, `formattedTitle` embeds the percentage into the title string (`"Uploading (50%)"`), while the right-hand label also displays `"50%"` and the progress bar below simultaneously indicates 50%.
+- **Trigger:** Any file transfer currently in progress.
+- **Impact:** Cluttered, repetitive UI with duplicate percentage values displayed side by side on the same row.
+- **Suggested Fix:** Keep `formattedTitle` as `i18n("Uploading")` or `i18n("Downloading")` without embedding `(%1%)`.
+- **Status:** Open
+
+### BUG-026: Missing `"cloud"` Style Check in `CompactRepresentation.qml` Icon Mask
+- **File:** contents/ui/CompactRepresentation.qml:40
+- **Issue:** `isMask` checks `s === "cloudstatus"`, but omits `s === "cloud"`. The configuration schema in `contents/config/main.xml` documents the option as `"cloud"`, and `main.qml` accepts both `"cloudstatus"` and `"cloud"`. When set to `"cloud"`, `isMask` evaluates to false.
+- **Trigger:** Setting `iconStyle` to `"cloud"`.
+- **Impact:** Symbolic cloud icon does not adapt to panel colors when configured as `"cloud"`.
+- **Suggested Fix:** Include `s === "cloud"` in the `isMask` check.
+- **Status:** Open
+
+### BUG-027: Missing Null Guard on `plasmoidItem` in `CompactRepresentation.qml` Click Handlers
+- **File:** contents/ui/CompactRepresentation.qml:19
+- **Issue:** `mouseArea.onPressed` and `mouseArea.onClicked` access `compactRoot.plasmoidItem.expanded` without checking if `compactRoot.plasmoidItem` is non-null.
+- **Trigger:** Mouse interaction during component destruction or before property binding.
+- **Impact:** Potential runtime TypeError: `Cannot read property 'expanded' of null`.
+- **Suggested Fix:** Add null guard `compactRoot.plasmoidItem ? compactRoot.plasmoidItem.expanded : false`.
+- **Status:** Open
 
 ## ✅ Resolved
 
