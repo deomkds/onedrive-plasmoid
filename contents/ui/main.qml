@@ -111,17 +111,25 @@ PlasmoidItem {
         property var callbacks: ({})
 
         onNewData: function(sourceName, data) {
-            var cb = callbacks[sourceName];
-            if (cb) {
-                cb(data);
-                delete callbacks[sourceName];
+            var list = callbacks[sourceName];
+            if (list && list.length > 0) {
+                var cb = list.shift();
+                if (cb) {
+                    cb(data);
+                }
+                if (list.length === 0) {
+                    delete callbacks[sourceName];
+                }
             }
             disconnectSource(sourceName);
         }
 
         function run(cmd, callback) {
             if (callback) {
-                callbacks[cmd] = callback;
+                if (!callbacks[cmd]) {
+                    callbacks[cmd] = [];
+                }
+                callbacks[cmd].push(callback);
             }
             connectSource(cmd);
         }
@@ -146,6 +154,17 @@ PlasmoidItem {
         return p;
     }
 
+    // Helper to construct custom --confdir argument if configured
+    function getConfDirArg() {
+        if (plasmoid.configuration.confDir) {
+            var p = resolvePath(plasmoid.configuration.confDir);
+            if (p && p !== "~/.config/onedrive") {
+                return " --confdir=" + escapeShellArg(p);
+            }
+        }
+        return "";
+    }
+
     // Initialize user environment and directories
     Component.onCompleted: {
         execute("echo $HOME", function(data) {
@@ -163,10 +182,22 @@ PlasmoidItem {
             root.updateResolvedSyncDir();
         }
         function onPollIntervalChanged() {
-            pollTimer.interval = Math.max(5, plasmoid.configuration.pollInterval) * 1000;
+            pollTimer.interval = Math.max(5, plasmoid.configuration.pollInterval || 10) * 1000;
         }
         function onQuotaIntervalChanged() {
-            quotaTimer.interval = Math.max(60, plasmoid.configuration.quotaInterval) * 1000;
+            quotaTimer.interval = Math.max(60, plasmoid.configuration.quotaInterval || 900) * 1000;
+        }
+        function onServiceModeChanged() {
+            root.refreshAll();
+        }
+        function onSystemdServiceChanged() {
+            root.refreshAll();
+        }
+        function onOnedriveBinChanged() {
+            root.refreshAll();
+        }
+        function onConfDirChanged() {
+            root.refreshAll();
         }
     }
 
@@ -183,18 +214,20 @@ PlasmoidItem {
     }
 
     function resetPollInterval() {
-        // If there are active file transfers, keep faster polling
-        for (var a = 0; a < Math.min(15, root.activityModel.count); a++) {
-            var it = root.activityModel.get(a);
-            if (it && it.status === "in_progress") {
-                if (pollTimer.interval !== 2000) {
-                    pollTimer.interval = 2000;
-                    pollTimer.restart();
+        var baseInterval = Math.max(5, plasmoid.configuration.pollInterval || 10) * 1000;
+        // Only keep faster polling if sync is actively in progress
+        if (root.syncStatus === "syncing") {
+            for (var a = 0; a < Math.min(15, root.activityModel.count); a++) {
+                var it = root.activityModel.get(a);
+                if (it && it.status === "in_progress") {
+                    if (pollTimer.interval !== 2000) {
+                        pollTimer.interval = 2000;
+                        pollTimer.restart();
+                    }
+                    return;
                 }
-                return;
             }
         }
-        var baseInterval = Math.max(5, plasmoid.configuration.pollInterval || 10) * 1000;
         if (pollTimer.interval !== baseInterval) {
             pollTimer.interval = baseInterval;
         }
@@ -204,7 +237,7 @@ PlasmoidItem {
     function checkStatus() {
         if (plasmoid.configuration.serviceMode === "systemd") {
             var service = plasmoid.configuration.systemdService || "onedrive.service";
-            execute("systemctl --user is-active " + service, function(data) {
+            execute("systemctl --user is-active " + escapeShellArg(service), function(data) {
                 var stdout = (data["stdout"] || "").trim();
                 if (stdout === "active") {
                     resetPollInterval();
@@ -217,14 +250,18 @@ PlasmoidItem {
                         }
                     }
 
-                    // Service is running, query status details
-                    execute((plasmoid.configuration.onedriveBin || "onedrive") + " --display-sync-status", function(statusData) {
+                    // Service is running, query status details with verbose output
+                    var bin = plasmoid.configuration.onedriveBin || "onedrive";
+                    execute(escapeShellArg(bin) + " --display-sync-status --verbose" + getConfDirArg(), function(statusData) {
                         var out = (statusData["stdout"] || "");
                         var parsed = OneDriveParser.parseSyncStatus(out);
                         if (parsed.accountType) root.accountType = parsed.accountType;
                         if (parsed.freeSpace) root.quotaRemaining = parsed.freeSpace;
 
-                        if (parsed.synced) {
+                        if (parsed.error) {
+                            root.syncStatus = "error";
+                            root.statusDescription = i18n("Sync Error");
+                        } else if (parsed.synced) {
                             root.syncStatus = "idle";
                             root.statusDescription = i18n("Synchronized");
                         } else {
@@ -261,8 +298,25 @@ PlasmoidItem {
             execute("pgrep -x " + escapeShellArg(binName), function(data) {
                 var pid = (data["stdout"] || "").trim();
                 if (pid !== "") {
-                    root.syncStatus = "idle";
-                    root.statusDescription = i18n("Running (PID %1)", pid);
+                    // Process is running, query status details
+                    execute(escapeShellArg(rawBin) + " --display-sync-status --verbose" + getConfDirArg(), function(statusData) {
+                        var out = (statusData["stdout"] || "");
+                        var parsed = OneDriveParser.parseSyncStatus(out);
+                        if (parsed.accountType) root.accountType = parsed.accountType;
+                        if (parsed.freeSpace) root.quotaRemaining = parsed.freeSpace;
+
+                        if (parsed.error) {
+                            root.syncStatus = "error";
+                            root.statusDescription = i18n("Sync Error");
+                        } else if (parsed.synced) {
+                            root.syncStatus = "idle";
+                            root.statusDescription = i18n("Running (PID %1)", pid);
+                        } else {
+                            root.syncStatus = "syncing";
+                            root.statusDescription = i18n("Synchronizing (PID %1)", pid);
+                        }
+                        root.lastSyncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    });
                 } else {
                     root.syncStatus = "offline";
                     root.statusDescription = i18n("Not running");
@@ -274,7 +328,7 @@ PlasmoidItem {
     // Storage quota query
     function fetchQuota() {
         var bin = plasmoid.configuration.onedriveBin || "onedrive";
-        execute(bin + " --display-quota", function(data) {
+        execute(escapeShellArg(bin) + " --display-quota" + getConfDirArg(), function(data) {
             if (data && data["stdout"]) {
                 var quota = OneDriveParser.parseQuota(data["stdout"]);
                 if (quota.valid) {
@@ -289,8 +343,13 @@ PlasmoidItem {
 
     // Recent activity log reading
     function fetchRecentLogs() {
+        // Journalctl user service logs are only applicable in systemd mode
+        if (plasmoid.configuration.serviceMode !== "systemd") {
+            return;
+        }
+
         var service = plasmoid.configuration.systemdService || "onedrive.service";
-        var cmd = "journalctl --user -u " + service + " -n 50 --output=short-iso --no-pager";
+        var cmd = "journalctl --user -u " + escapeShellArg(service) + " -n 50 --output=short-iso --no-pager";
 
         execute(cmd, function(data) {
             if (data && data["stdout"]) {
@@ -303,9 +362,9 @@ PlasmoidItem {
                             hasActiveTransfers = true;
                         }
 
-                        // Check if already in model
+                        // Check if already in model across all items to prevent duplicate insertions
                         var foundIndex = -1;
-                        for (var j = 0; j < Math.min(20, root.activityModel.count); j++) {
+                        for (var j = 0; j < root.activityModel.count; j++) {
                             var current = root.activityModel.get(j);
                             if (current && (current.fileName === e.fileName || (current.filePath && current.filePath === e.filePath)) && current.type === e.type) {
                                 foundIndex = j;
@@ -318,7 +377,11 @@ PlasmoidItem {
                             if (existing.status === "completed" && e.status === "in_progress") {
                                 root.activityModel.remove(foundIndex);
                                 root.activityModel.insert(0, e);
-                            } else if (existing.progress !== e.progress || existing.status !== e.status || existing.eta !== e.eta || existing.title !== e.title) {
+                            } else if (existing.time !== e.time && e.status === "completed") {
+                                // Previously completed file re-synchronized with a newer timestamp: move to top
+                                root.activityModel.remove(foundIndex);
+                                root.activityModel.insert(0, e);
+                            } else if (existing.progress !== e.progress || existing.status !== e.status || existing.eta !== e.eta || existing.title !== e.title || existing.time !== e.time) {
                                 root.activityModel.setProperty(foundIndex, "progress", e.progress);
                                 root.activityModel.setProperty(foundIndex, "status", e.status);
                                 root.activityModel.setProperty(foundIndex, "eta", e.eta);
@@ -358,14 +421,14 @@ PlasmoidItem {
 
         if (plasmoid.configuration.serviceMode === "systemd") {
             var service = plasmoid.configuration.systemdService || "onedrive.service";
-            execute("systemctl --user restart " + service, function(data) {
+            execute("systemctl --user restart " + escapeShellArg(service), function(data) {
                 root.isBusy = false;
                 checkStatus();
                 fetchRecentLogs();
             });
         } else {
             var bin = plasmoid.configuration.onedriveBin || "onedrive";
-            execute(bin + " --sync", function(data) {
+            execute(escapeShellArg(bin) + " --sync" + getConfDirArg(), function(data) {
                 root.isBusy = false;
                 checkStatus();
                 fetchRecentLogs();
@@ -376,28 +439,49 @@ PlasmoidItem {
 
     function togglePause() {
         root.isBusy = true;
-        var service = plasmoid.configuration.systemdService || "onedrive.service";
-
-        if (root.syncStatus === "suspended" || root.syncStatus === "offline") {
-            root.syncStatus = "syncing";
-            root.statusDescription = i18n("Starting service...");
-            execute("systemctl --user start " + service, function(data) {
-                root.isBusy = false;
-                checkStatus();
-            });
+        if (plasmoid.configuration.serviceMode === "systemd") {
+            var service = plasmoid.configuration.systemdService || "onedrive.service";
+            if (root.syncStatus === "suspended" || root.syncStatus === "offline") {
+                root.syncStatus = "syncing";
+                root.statusDescription = i18n("Starting service...");
+                execute("systemctl --user start " + escapeShellArg(service), function(data) {
+                    root.isBusy = false;
+                    checkStatus();
+                });
+            } else {
+                root.statusDescription = i18n("Stopping service...");
+                execute("systemctl --user stop " + escapeShellArg(service), function(data) {
+                    root.isBusy = false;
+                    root.syncStatus = "suspended";
+                    root.statusDescription = i18n("Paused / Suspended");
+                });
+            }
         } else {
-            root.statusDescription = i18n("Stopping service...");
-            execute("systemctl --user stop " + service, function(data) {
-                root.isBusy = false;
-                root.syncStatus = "suspended";
-                root.statusDescription = i18n("Paused / Suspended");
-            });
+            // Standalone CLI mode
+            var rawBin = (plasmoid.configuration.onedriveBin || "onedrive").trim();
+            var binName = rawBin.split("/").pop().replace(/["']/g, "").trim() || "onedrive";
+            if (root.syncStatus === "suspended" || root.syncStatus === "offline") {
+                root.syncStatus = "syncing";
+                root.statusDescription = i18n("Starting onedrive...");
+                execute(escapeShellArg(rawBin) + " --monitor" + getConfDirArg() + " >/dev/null 2>&1 &", function() {
+                    root.isBusy = false;
+                    checkStatus();
+                });
+            } else {
+                root.statusDescription = i18n("Stopping onedrive...");
+                execute("pkill -x " + escapeShellArg(binName), function() {
+                    root.isBusy = false;
+                    root.syncStatus = "suspended";
+                    root.statusDescription = i18n("Paused / Suspended");
+                });
+            }
         }
     }
 
     function openFolder() {
         var dir = root.resolvedSyncDir || "~/OneDrive";
-        execute("xdg-open \"" + dir + "\"");
+        var script = 'd="$1"; if [ "${d#~/}" != "$d" ]; then d="$HOME/${d#~/}"; fi; xdg-open "$d"';
+        execute("sh -c " + escapeShellArg(script) + " _ " + escapeShellArg(dir));
     }
 
     function openFileOrFolder(target) {
@@ -446,12 +530,22 @@ PlasmoidItem {
 
     function openWeb() {
         var url = plasmoid.configuration.webUrl || "https://onedrive.live.com";
-        execute("xdg-open \"" + url + "\"");
+        execute("xdg-open " + escapeShellArg(url));
     }
 
     function viewLogs() {
         var service = plasmoid.configuration.systemdService || "onedrive.service";
-        execute("konsole -e journalctl --user -u " + service + " -f || xdg-open \"journalctl --user -u " + service + "\"");
+        var viewCmd = "journalctl --user -u " + escapeShellArg(service) + " -f";
+        var script = 'for term in konsole xdg-terminal-exec x-terminal-emulator gnome-terminal alacritty kitty foot; do ' +
+                     '  if command -v "$term" >/dev/null 2>&1; then ' +
+                     '    case "$term" in ' +
+                     '      konsole) exec konsole -e ' + viewCmd + ' ;; ' +
+                     '      gnome-terminal) exec gnome-terminal -- ' + viewCmd + ' ;; ' +
+                     '      *) exec "$term" -e ' + viewCmd + ' ;; ' +
+                     '    esac; ' +
+                     '  fi; ' +
+                     'done';
+        execute("sh -c " + escapeShellArg(script));
     }
 
     function openConfiguration() {

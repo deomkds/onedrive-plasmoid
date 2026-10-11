@@ -2,10 +2,10 @@
 .pragma library
 
 function formatBytes(bytes) {
-    if (bytes === 0 || isNaN(bytes)) return '0 B';
+    if (typeof bytes !== 'number' || isNaN(bytes) || bytes <= 0) return '0 B';
     var k = 1024;
-    var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    var sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    var i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -64,17 +64,25 @@ function parseQuota(output) {
 
 function parseSyncStatus(output) {
     var result = {
-        synced: true,
+        synced: false,
         accountType: "",
         freeSpace: "",
-        details: ""
+        details: "",
+        error: false
     };
 
     if (!output || typeof output !== 'string') {
+        result.error = true;
+        result.details = "No status output";
         return result;
     }
 
-    if (output.indexOf("There are no pending changes") !== -1 ||
+    if (output.match(/ERROR:|Error:|Cannot connect|unauthorized|failed|not configured|disk image is malformed/i)) {
+        result.synced = false;
+        result.error = true;
+        result.details = "Service error";
+    } else if (output.indexOf("There are no pending changes") !== -1 ||
+        output.indexOf("Sync with Microsoft OneDrive is complete") !== -1 ||
         output.indexOf("Sync with OneDrive is complete") !== -1 ||
         output.indexOf("matches the data online") !== -1) {
         result.synced = true;
@@ -84,9 +92,14 @@ function parseSyncStatus(output) {
                output.indexOf("data to download") !== -1 ||
                output.indexOf("data to upload") !== -1 ||
                output.indexOf("Downloading") !== -1 ||
-               output.indexOf("Uploading") !== -1) {
+               output.indexOf("Uploading") !== -1 ||
+               output.indexOf("Syncing changes") !== -1) {
         result.synced = false;
         result.details = "Changes pending";
+    } else {
+        // Fallback for clean unprompted output
+        result.synced = true;
+        result.details = "Ready";
     }
 
     var accountMatch = output.match(/Account Type:\s+([a-zA-Z0-9_-]+)/i);
@@ -108,16 +121,16 @@ function cleanFileName(raw) {
     // Strip trailing "... done" or "...done" or "..."
     cleaned = cleaned.replace(/\s*\.\.\.\s*done$/i, "");
     cleaned = cleaned.replace(/\s*\.\.\.$/, "");
+    // Strip surrounding quotes before stripping relative ./ prefix
+    cleaned = cleaned.replace(/^["']|["']$/g, "").trim();
     // Strip leading "./"
     cleaned = cleaned.replace(/^\.\//, "");
-    // Strip surrounding quotes if any
-    cleaned = cleaned.replace(/^["']|["']$/g, "");
     return cleaned.trim();
 }
 
 function parseLogEntries(logOutput) {
     var entries = [];
-    var entryMap = {}; // key: type + ":" + filePath -> entry index in entries
+    var entryMap = Object.create(null); // key: type + ":" + filePath -> entry index in entries
     if (!logOutput || typeof logOutput !== 'string') {
         return entries;
     }
@@ -201,8 +214,8 @@ function parseLogEntries(logOutput) {
                 status: "completed",
                 eta: ""
             };
-        } else if (content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i)) {
-            var delMatch = content.match(/Deleting (?:item from OneDrive:|item)\s+(.+)/i);
+        } else if (content.match(/^Deleting\s+(?:item\s+from\s+(?:Microsoft\s+)?OneDrive|local\s+file|local\s+directory|online\s+(?:file|folder)\s+from\s+(?:Microsoft\s+)?OneDrive):\s*(.+)/i)) {
+            var delMatch = content.match(/^Deleting\s+(?:item\s+from\s+(?:Microsoft\s+)?OneDrive|local\s+file|local\s+directory|online\s+(?:file|folder)\s+from\s+(?:Microsoft\s+)?OneDrive):\s*(.+)/i);
             var delPath = cleanFileName(delMatch[1]);
             entry = {
                 type: "delete",
@@ -215,8 +228,8 @@ function parseLogEntries(logOutput) {
                 status: "completed",
                 eta: ""
             };
-        } else if (content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i)) {
-            var moveMatch = content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i);
+        } else if (content.match(/^Moving\s+(.+?)\s+to\s+(\.?\/.+)$/i) || content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i)) {
+            var moveMatch = content.match(/^Moving\s+(.+?)\s+to\s+(\.?\/.+)$/i) || content.match(/^Moving\s+(.+)\s+to\s+(.+)$/i);
             var srcPath = cleanFileName(moveMatch[1]);
             var dstPath = cleanFileName(moveMatch[2]);
             entry = {
@@ -258,11 +271,13 @@ function parseLogEntries(logOutput) {
                 status: "completed",
                 eta: ""
             };
-        } else if (content.indexOf("ERROR:") !== -1 || content.indexOf("Error:") !== -1) {
+        } else if (content.match(/(?:ERROR|Error):\s*(.+)/i)) {
+            var errMatch = content.match(/(?:ERROR|Error):\s*(.+)/i);
+            var errMsg = cleanFileName(errMatch[1]);
             entry = {
                 type: "error",
                 title: "Error",
-                fileName: content.substring(content.indexOf("rror:") + 5).trim(),
+                fileName: errMsg || content,
                 filePath: "",
                 time: timestamp,
                 icon: "dialog-error",
@@ -274,7 +289,7 @@ function parseLogEntries(logOutput) {
 
         if (entry) {
             var key = entry.type + ":" + (entry.filePath || entry.fileName);
-            if (entryMap.hasOwnProperty(key)) {
+            if (entryMap[key] !== undefined) {
                 var existingIdx = entryMap[key];
                 entries[existingIdx] = entry;
             } else {
