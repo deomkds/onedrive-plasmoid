@@ -5,6 +5,8 @@ A native, modern KDE Plasma 6 widget (Plasmoid) to monitor and control the [Micr
 ![KDE Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-blue?logo=kde)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
+![OneDrive Plasmoid Preview](window.png)
+
 ---
 
 ## Features
