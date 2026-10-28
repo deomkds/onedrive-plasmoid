@@ -101,6 +101,22 @@ To enable the systemd service to run automatically on user login:
 systemctl --user enable --now onedrive.service
 ```
 
+### Recommended OneDrive Client Configuration
+
+When using this Plasmoid, it is strongly recommended to disable the client's built-in version check. Because the widget periodically queries the CLI for status updates, the client binary executes its version check routine against GitHub on each polling cycle. This can quickly exhaust GitHub's unauthenticated API rate limits and trigger repetitive desktop notifications.
+
+Add the following option to your `~/.config/onedrive/config`:
+
+```ini
+disable_version_check = "true"
+```
+
+Apply the changes by restarting the service:
+
+```bash
+systemctl --user restart onedrive.service
+```
+
 ---
 
 ## Authors & Acknowledgments
